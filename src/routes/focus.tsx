@@ -5,7 +5,7 @@ import { MobileShell } from "@/components/mobile/Shell";
 import { GlassCard } from "@/components/mobile/ui";
 
 export const Route = createFileRoute("/focus")({
-  head: () => ({ meta: [{ title: "Focus Mode — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Focus Mode — Viora AI" }] }),
   component: Focus,
 });
 

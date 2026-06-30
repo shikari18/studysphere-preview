@@ -5,7 +5,7 @@ import { GlassCard, Sparkline, Pill } from "@/components/mobile/ui";
 import { studyHours, subjects } from "@/lib/mock";
 
 export const Route = createFileRoute("/analytics")({
-  head: () => ({ meta: [{ title: "Analytics — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Analytics — Viora AI" }] }),
   component: Analytics,
 });
 

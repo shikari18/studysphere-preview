@@ -4,7 +4,7 @@ import { ArrowRight, Mail, X } from "lucide-react";
 import hero from "@/assets/onboarding-hero.jpg";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Welcome — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Welcome — Viora AI" }] }),
   component: Onboarding,
 });
 
@@ -48,7 +48,7 @@ function Onboarding() {
     >
       <header className="px-6 pt-8 flex items-center justify-between">
         <span className="text-[13px] font-medium tracking-wider" style={{ color: "#1f1f2b" }}>
-          STUDYSPHERE <span style={{ color: "#6d4cff" }}>AI</span>
+          VIORA <span style={{ color: "#6d4cff" }}>AI</span>
         </span>
       </header>
 

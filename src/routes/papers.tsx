@@ -5,7 +5,7 @@ import { GlassCard, Pill } from "@/components/mobile/ui";
 import { examBoards, pastQuestions } from "@/lib/mock";
 
 export const Route = createFileRoute("/papers")({
-  head: () => ({ meta: [{ title: "Past Papers — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Past Papers — Viora AI" }] }),
   component: Papers,
 });
 
@@ -34,10 +34,12 @@ function Papers() {
         <div className="grid grid-cols-2 gap-3">
           {examBoards.map((b) => (
             <GlassCard key={b.code} className="!p-4">
-              <div className="w-9 h-9 rounded-[10px] gradient-primary flex items-center justify-center text-white text-[11px] font-bold tracking-tight">
-                {b.code}
+              <div className="flex items-center justify-between">
+                <span className="mono text-[15px] font-semibold tracking-tight text-gradient">{b.code}</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Board</span>
               </div>
-              <p className="mono text-[18px] font-medium mt-3">{b.papers.toLocaleString()}</p>
+              <div className="mt-3 h-px bg-hairline" />
+              <p className="mono text-[20px] font-medium mt-3">{b.papers.toLocaleString()}</p>
               <p className="text-[11px] text-muted-foreground">papers · trending: {b.trending}</p>
             </GlassCard>
           ))}

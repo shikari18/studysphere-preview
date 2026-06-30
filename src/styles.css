@@ -117,11 +117,14 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
   }
+  html, body { height: 100%; }
   body {
     background:
-      radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 60%),
-      radial-gradient(900px 500px at 110% 10%, color-mix(in oklab, var(--secondary) 16%, transparent), transparent 60%),
+      radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, color-mix(in oklab, var(--secondary) 8%, transparent), transparent 60%),
       var(--background);
     min-height: 100vh;
   }

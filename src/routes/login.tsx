@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Sign in — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Sign in — Viora AI" }] }),
   component: Login,
 });
 
@@ -96,7 +96,7 @@ function Login() {
         </form>
 
         <p className="text-center text-[13px] mt-6" style={{ color: "#5a5a6d" }}>
-          New to StudySphere?{" "}
+          New to Viora?{" "}
           <Link to="/" style={{ color: "#6d4cff", fontWeight: 500 }}>
             Create an account
           </Link>

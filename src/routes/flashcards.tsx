@@ -5,7 +5,7 @@ import { MobileShell, PageHeader, Section } from "@/components/mobile/Shell";
 import { GlassCard } from "@/components/mobile/ui";
 
 export const Route = createFileRoute("/flashcards")({
-  head: () => ({ meta: [{ title: "Flashcards — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Flashcards — Viora AI" }] }),
   component: Flashcards,
 });
 

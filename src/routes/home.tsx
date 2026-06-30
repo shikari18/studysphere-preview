@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, Mic, Upload, Play, Sparkles as SparkIcon, Clock, Target, ChevronRight } from "lucide-react";
+import { BotMark } from "@/components/BotMark";
 import { MobileShell, Section } from "@/components/mobile/Shell";
 import { GlassCard, Pill, ProgressRing } from "@/components/mobile/ui";
 import { subjects, exams, notes } from "@/lib/mock";
 
 export const Route = createFileRoute("/home")({
-  head: () => ({ meta: [{ title: "Home — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Home — Viora AI" }] }),
   component: Home,
 });
 
@@ -35,20 +36,20 @@ function Home() {
 
       <Section>
         <GlassCard className="!p-0 overflow-hidden">
-          <div className="p-5 gradient-primary text-white">
-            <p className="text-[11px] uppercase tracking-wider opacity-80">Continue studying</p>
+          <div className="p-5 text-white" style={{ background: "linear-gradient(135deg,#0a0a0f 0%,#1a1a24 100%)" }}>
+            <p className="text-[11px] uppercase tracking-wider opacity-70">Continue studying</p>
             <div className="flex items-center justify-between mt-2">
               <div>
                 <h3 className="text-[18px] font-semibold">Quadratic Functions</h3>
-                <p className="text-[12px] opacity-80 mt-0.5">Mathematics · Chapter 4</p>
+                <p className="text-[12px] opacity-70 mt-0.5">Mathematics · Chapter 4</p>
               </div>
               <ProgressRing value={68} size={58} label="68%" />
             </div>
             <div className="flex gap-2 mt-5">
-              <button className="tap bg-white/15 backdrop-blur rounded-[14px] px-4 py-2.5 text-sm font-medium flex items-center gap-2 flex-1 justify-center">
+              <button className="tap bg-white/10 backdrop-blur rounded-[14px] px-4 py-2.5 text-sm font-medium flex items-center gap-2 flex-1 justify-center border border-white/10">
                 <Play size={14} /> Resume
               </button>
-              <button className="tap bg-white/15 rounded-[14px] w-11 h-11 flex items-center justify-center" aria-label="Quick quiz">
+              <button className="tap bg-white/10 border border-white/10 rounded-[14px] w-11 h-11 flex items-center justify-center" aria-label="Quick quiz">
                 <SparkIcon size={16} />
               </button>
             </div>
@@ -60,10 +61,10 @@ function Home() {
         <Link to="/tutor" className="block">
           <GlassCard className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center">
-              <SparkIcon size={16} color="white" />
+              <BotMark size={18} withGradient={false} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium">Ask StudySphere</p>
+              <p className="text-[14px] font-medium">Ask Viora</p>
               <p className="text-[12px] text-muted-foreground truncate">Voice, photo or text — instant answers</p>
             </div>
             <button className="w-9 h-9 rounded-full glass-strong flex items-center justify-center"><Mic size={14} /></button>
