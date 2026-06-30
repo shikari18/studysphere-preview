@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TutorRouteImport } from './routes/tutor'
 import { Route as SubjectsRouteImport } from './routes/subjects'
+import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QuizRouteImport } from './routes/quiz'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PlannerRouteImport } from './routes/planner'
@@ -20,6 +21,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as FocusRouteImport } from './routes/focus'
 import { Route as FlashcardsRouteImport } from './routes/flashcards'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
@@ -32,6 +34,11 @@ const TutorRoute = TutorRouteImport.update({
 const SubjectsRoute = SubjectsRouteImport.update({
   id: '/subjects',
   path: '/subjects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScanRoute = ScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const QuizRoute = QuizRouteImport.update({
@@ -79,6 +86,11 @@ const FlashcardsRoute = FlashcardsRouteImport.update({
   path: '/flashcards',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BillingRoute = BillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -99,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/billing': typeof BillingRoute
+  '/dashboard': typeof DashboardRoute
   '/flashcards': typeof FlashcardsRoute
   '/focus': typeof FocusRoute
   '/home': typeof HomeRoute
@@ -108,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/planner': typeof PlannerRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
+  '/scan': typeof ScanRoute
   '/subjects': typeof SubjectsRoute
   '/tutor': typeof TutorRoute
 }
@@ -115,6 +129,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/billing': typeof BillingRoute
+  '/dashboard': typeof DashboardRoute
   '/flashcards': typeof FlashcardsRoute
   '/focus': typeof FocusRoute
   '/home': typeof HomeRoute
@@ -124,6 +139,7 @@ export interface FileRoutesByTo {
   '/planner': typeof PlannerRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
+  '/scan': typeof ScanRoute
   '/subjects': typeof SubjectsRoute
   '/tutor': typeof TutorRoute
 }
@@ -132,6 +148,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/billing': typeof BillingRoute
+  '/dashboard': typeof DashboardRoute
   '/flashcards': typeof FlashcardsRoute
   '/focus': typeof FocusRoute
   '/home': typeof HomeRoute
@@ -141,6 +158,7 @@ export interface FileRoutesById {
   '/planner': typeof PlannerRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
+  '/scan': typeof ScanRoute
   '/subjects': typeof SubjectsRoute
   '/tutor': typeof TutorRoute
 }
@@ -150,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/billing'
+    | '/dashboard'
     | '/flashcards'
     | '/focus'
     | '/home'
@@ -159,6 +178,7 @@ export interface FileRouteTypes {
     | '/planner'
     | '/profile'
     | '/quiz'
+    | '/scan'
     | '/subjects'
     | '/tutor'
   fileRoutesByTo: FileRoutesByTo
@@ -166,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/billing'
+    | '/dashboard'
     | '/flashcards'
     | '/focus'
     | '/home'
@@ -175,6 +196,7 @@ export interface FileRouteTypes {
     | '/planner'
     | '/profile'
     | '/quiz'
+    | '/scan'
     | '/subjects'
     | '/tutor'
   id:
@@ -182,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/billing'
+    | '/dashboard'
     | '/flashcards'
     | '/focus'
     | '/home'
@@ -191,6 +214,7 @@ export interface FileRouteTypes {
     | '/planner'
     | '/profile'
     | '/quiz'
+    | '/scan'
     | '/subjects'
     | '/tutor'
   fileRoutesById: FileRoutesById
@@ -199,6 +223,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalyticsRoute: typeof AnalyticsRoute
   BillingRoute: typeof BillingRoute
+  DashboardRoute: typeof DashboardRoute
   FlashcardsRoute: typeof FlashcardsRoute
   FocusRoute: typeof FocusRoute
   HomeRoute: typeof HomeRoute
@@ -208,6 +233,7 @@ export interface RootRouteChildren {
   PlannerRoute: typeof PlannerRoute
   ProfileRoute: typeof ProfileRoute
   QuizRoute: typeof QuizRoute
+  ScanRoute: typeof ScanRoute
   SubjectsRoute: typeof SubjectsRoute
   TutorRoute: typeof TutorRoute
 }
@@ -226,6 +252,13 @@ declare module '@tanstack/react-router' {
       path: '/subjects'
       fullPath: '/subjects'
       preLoaderRoute: typeof SubjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scan': {
+      id: '/scan'
+      path: '/scan'
+      fullPath: '/scan'
+      preLoaderRoute: typeof ScanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/quiz': {
@@ -291,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FlashcardsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/billing': {
       id: '/billing'
       path: '/billing'
@@ -319,6 +359,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalyticsRoute: AnalyticsRoute,
   BillingRoute: BillingRoute,
+  DashboardRoute: DashboardRoute,
   FlashcardsRoute: FlashcardsRoute,
   FocusRoute: FocusRoute,
   HomeRoute: HomeRoute,
@@ -328,6 +369,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlannerRoute: PlannerRoute,
   ProfileRoute: ProfileRoute,
   QuizRoute: QuizRoute,
+  ScanRoute: ScanRoute,
   SubjectsRoute: SubjectsRoute,
   TutorRoute: TutorRoute,
 }
