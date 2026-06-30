@@ -4,7 +4,7 @@ import { MobileShell, PageHeader, Section } from "@/components/mobile/Shell";
 import { GlassCard, PrimaryButton, ProgressRing } from "@/components/mobile/ui";
 
 export const Route = createFileRoute("/planner")({
-  head: () => ({ meta: [{ title: "Planner — Viora AI" }] }),
+  head: () => ({ meta: [{ title: "Planner — StudySphere AI" }] }),
   component: Planner,
 });
 

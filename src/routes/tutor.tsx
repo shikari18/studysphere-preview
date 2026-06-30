@@ -7,7 +7,7 @@ import { BotMark } from "@/components/BotMark";
 import { conversation } from "@/lib/mock";
 
 export const Route = createFileRoute("/tutor")({
-  head: () => ({ meta: [{ title: "AI Tutor — Viora AI" }] }),
+  head: () => ({ meta: [{ title: "AI Tutor — StudySphere AI" }] }),
   component: Tutor,
 });
 
@@ -56,7 +56,7 @@ function Tutor() {
               <BotMark size={20} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-[15px] font-semibold tracking-tight leading-tight truncate">Viora</h1>
+              <h1 className="text-[15px] font-semibold tracking-tight leading-tight truncate">StudySphere</h1>
               <p className="text-[11px] text-muted-foreground leading-tight">Online · AI tutor</p>
             </div>
           </div>
@@ -64,7 +64,7 @@ function Tutor() {
           <button
             onClick={() => setInCall(true)}
             className="w-10 h-10 rounded-full gradient-primary tap flex items-center justify-center shadow-[0_8px_20px_-8px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
-            aria-label="Call Viora"
+            aria-label="Call StudySphere"
           >
             <Phone size={16} color="white" />
           </button>
@@ -81,7 +81,7 @@ function Tutor() {
               ) : (
                 <div className="max-w-[88%] space-y-2">
                   <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <BotMark size={12} /> Viora
+                    <BotMark size={12} /> StudySphere
                   </div>
                   <div className="text-[14px] leading-relaxed text-foreground">{m.text}</div>
                   {m.card && (
@@ -178,7 +178,7 @@ function CallSession({ onEnd }: { onEnd: () => void }) {
     >
       <div className="pt-14 text-center px-6">
         <p className="text-[11px] uppercase tracking-[0.2em] opacity-60">Live class · {mm}:{ss}</p>
-        <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Viora</h2>
+        <h2 className="mt-2 text-[22px] font-semibold tracking-tight">StudySphere</h2>
         <p className="text-[12px] opacity-70 mt-1">Listening — ask anything out loud</p>
       </div>
 

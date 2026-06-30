@@ -4,7 +4,7 @@ import { Check, ChevronLeft, Crown, Sparkles as Star, Rocket } from "lucide-reac
 import { MobileShell } from "@/components/mobile/Shell";
 
 export const Route = createFileRoute("/billing")({
-  head: () => ({ meta: [{ title: "Plans — Viora AI" }] }),
+  head: () => ({ meta: [{ title: "Plans — StudySphere AI" }] }),
   component: Billing,
 });
 

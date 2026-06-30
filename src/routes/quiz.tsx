@@ -5,7 +5,7 @@ import { MobileShell, PageHeader, Section } from "@/components/mobile/Shell";
 import { GlassCard, PrimaryButton } from "@/components/mobile/ui";
 
 export const Route = createFileRoute("/quiz")({
-  head: () => ({ meta: [{ title: "Quiz Generator — Viora AI" }] }),
+  head: () => ({ meta: [{ title: "Quiz Generator — StudySphere AI" }] }),
   component: Quiz,
 });
 
