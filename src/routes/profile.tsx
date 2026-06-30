@@ -93,11 +93,11 @@ function Profile() {
             <span className="text-[12px] text-muted-foreground capitalize">{theme}</span>
           </button>
           {[
-            { i: Settings, t: "Account & preferences" },
-            { i: HelpCircle, t: "Help & support" },
-            { i: LogOut, t: "Sign out", danger: true },
+            { i: Settings, t: "Account & preferences", onClick: () => {} },
+            { i: HelpCircle, t: "Help & support", onClick: () => {} },
+            { i: LogOut, t: "Sign out", danger: true, onClick: handleSignOut },
           ].map((r) => (
-            <button key={r.t} className="w-full flex items-center gap-3 px-4 py-3.5 tap text-left">
+            <button key={r.t} onClick={r.onClick} className="w-full flex items-center gap-3 px-4 py-3.5 tap text-left">
               <div className="w-9 h-9 rounded-[10px] bg-glass-strong flex items-center justify-center"><r.i size={15} /></div>
               <span className={`flex-1 text-[13.5px] font-medium ${r.danger ? "text-[color:var(--destructive)]" : ""}`}>{r.t}</span>
               <ChevronRight size={15} className="text-muted-foreground" />
