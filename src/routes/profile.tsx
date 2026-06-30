@@ -6,7 +6,7 @@ import { useTheme } from "@/lib/theme";
 
 
 export const Route = createFileRoute("/profile")({
-  head: () => ({ meta: [{ title: "Profile — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Profile — Viora AI" }] }),
   component: Profile,
 });
 
@@ -101,7 +101,7 @@ function Profile() {
         </div>
 
         <div className="mt-4 flex items-center justify-center gap-1.5">
-          <Pill>v1.0 · StudySphere AI</Pill>
+          <Pill>v1.0 · Viora AI</Pill>
         </div>
       </Section>
     </MobileShell>

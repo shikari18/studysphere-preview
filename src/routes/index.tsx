@@ -4,7 +4,7 @@ import { ArrowRight, Mail, X } from "lucide-react";
 import hero from "@/assets/onboarding-hero.jpg";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Welcome — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Welcome — Viora AI" }] }),
   component: Onboarding,
 });
 

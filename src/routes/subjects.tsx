@@ -5,7 +5,7 @@ import { GlassCard, Pill, ProgressRing } from "@/components/mobile/ui";
 import { subjects } from "@/lib/mock";
 
 export const Route = createFileRoute("/subjects")({
-  head: () => ({ meta: [{ title: "Subjects — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Subjects — Viora AI" }] }),
   component: Subjects,
 });
 

@@ -7,7 +7,7 @@ import { BotMark } from "@/components/BotMark";
 import { conversation } from "@/lib/mock";
 
 export const Route = createFileRoute("/tutor")({
-  head: () => ({ meta: [{ title: "AI Tutor — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "AI Tutor — Viora AI" }] }),
   component: Tutor,
 });
 
@@ -74,7 +74,7 @@ function Tutor() {
               <div className="max-w-[88%] space-y-2">
                 <div className="text-[14px] leading-relaxed">
                   <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1.5">
-                    <BotMark size={12} /> StudySphere
+                    <BotMark size={12} /> Viora
                   </div>
                   {m.text}
                 </div>

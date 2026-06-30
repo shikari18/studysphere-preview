@@ -5,7 +5,7 @@ import { GlassCard, Pill } from "@/components/mobile/ui";
 import { notes } from "@/lib/mock";
 
 export const Route = createFileRoute("/notes")({
-  head: () => ({ meta: [{ title: "Smart Notes — StudySphere AI" }] }),
+  head: () => ({ meta: [{ title: "Smart Notes — Viora AI" }] }),
   component: Notes,
 });
 
