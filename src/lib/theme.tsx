@@ -7,15 +7,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    const stored = (typeof localStorage !== "undefined" && localStorage.getItem("ss-theme")) as Theme | null;
-    if (stored) setTheme(stored);
+    const stored = (typeof localStorage !== "undefined" && localStorage.getItem("viora-theme")) as Theme | null;
+    if (stored === "dark" || stored === "light") setTheme(stored);
   }, []);
 
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove("dark", "light");
     root.classList.add(theme);
-    try { localStorage.setItem("ss-theme", theme); } catch {}
+    try { localStorage.setItem("viora-theme", theme); } catch {}
   }, [theme]);
 
   return (
