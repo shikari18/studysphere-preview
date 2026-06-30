@@ -15,6 +15,7 @@ import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QuizRouteImport } from './routes/quiz'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PlannerRouteImport } from './routes/planner'
+import { Route as PastPapersRouteImport } from './routes/past-papers'
 import { Route as PapersRouteImport } from './routes/papers'
 import { Route as NotesRouteImport } from './routes/notes'
 import { Route as LoginRouteImport } from './routes/login'
@@ -54,6 +55,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const PlannerRoute = PlannerRouteImport.update({
   id: '/planner',
   path: '/planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PastPapersRoute = PastPapersRouteImport.update({
+  id: '/past-papers',
+  path: '/past-papers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PapersRoute = PapersRouteImport.update({
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/notes': typeof NotesRoute
   '/papers': typeof PapersRoute
+  '/past-papers': typeof PastPapersRoute
   '/planner': typeof PlannerRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/notes': typeof NotesRoute
   '/papers': typeof PapersRoute
+  '/past-papers': typeof PastPapersRoute
   '/planner': typeof PlannerRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/notes': typeof NotesRoute
   '/papers': typeof PapersRoute
+  '/past-papers': typeof PastPapersRoute
   '/planner': typeof PlannerRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/notes'
     | '/papers'
+    | '/past-papers'
     | '/planner'
     | '/profile'
     | '/quiz'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/notes'
     | '/papers'
+    | '/past-papers'
     | '/planner'
     | '/profile'
     | '/quiz'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/notes'
     | '/papers'
+    | '/past-papers'
     | '/planner'
     | '/profile'
     | '/quiz'
@@ -230,6 +242,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NotesRoute: typeof NotesRoute
   PapersRoute: typeof PapersRoute
+  PastPapersRoute: typeof PastPapersRoute
   PlannerRoute: typeof PlannerRoute
   ProfileRoute: typeof ProfileRoute
   QuizRoute: typeof QuizRoute
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       path: '/planner'
       fullPath: '/planner'
       preLoaderRoute: typeof PlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/past-papers': {
+      id: '/past-papers'
+      path: '/past-papers'
+      fullPath: '/past-papers'
+      preLoaderRoute: typeof PastPapersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/papers': {
@@ -366,6 +386,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NotesRoute: NotesRoute,
   PapersRoute: PapersRoute,
+  PastPapersRoute: PastPapersRoute,
   PlannerRoute: PlannerRoute,
   ProfileRoute: ProfileRoute,
   QuizRoute: QuizRoute,
@@ -376,3 +397,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -7,7 +7,7 @@ const tabs = [
   { to: "/home", label: "Home", icon: Home },
   { to: "/subjects", label: "Subjects", icon: BookOpen },
   { to: "/tutor", label: "Tutor", icon: "bot" as const },
-  { to: "/papers", label: "Papers", icon: FileText },
+  { to: "/past-papers", label: "Papers", icon: FileText },
   { to: "/profile", label: "Profile", icon: User },
 ] as const;
 

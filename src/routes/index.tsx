@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowRight, Mail, X } from "lucide-react";
 import hero from "@/assets/onboarding-hero.jpg";
+import logo from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Welcome — StudySphere AI" }] }),
@@ -46,9 +47,10 @@ function Onboarding() {
       className="min-h-[100dvh] flex flex-col"
       style={{ background: "#ffffff", color: "#0b0b14" }}
     >
-      <header className="px-6 pt-8 flex items-center justify-between">
-        <span className="text-[13px] font-medium tracking-wider" style={{ color: "#1f1f2b" }}>
-          VIORA <span style={{ color: "#6d4cff" }}>AI</span>
+      <header className="px-6 pt-8 flex items-center gap-2.5">
+        <img src={logo} className="w-6 h-6 rounded-md object-contain" alt="StudySphere Logo" />
+        <span className="text-[13.5px] font-semibold tracking-wider" style={{ color: "#1f1f2b" }}>
+          STUDYSPHERE <span style={{ color: "#6d4cff" }}>AI</span>
         </span>
       </header>
 

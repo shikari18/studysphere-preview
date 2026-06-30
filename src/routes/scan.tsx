@@ -4,24 +4,60 @@ import { Camera, Upload, FileText, Sparkles, ArrowLeft, CheckCircle2 } from "luc
 import { MobileShell } from "@/components/mobile/Shell";
 import { GlassCard, Pill, PrimaryButton } from "@/components/mobile/ui";
 import { BotMark } from "@/components/BotMark";
+import { groqChat, fileToDataUrl, GROQ_VISION_MODEL } from "@/lib/groq";
 
 export const Route = createFileRoute("/scan")({
   head: () => ({ meta: [{ title: "Scan Note — StudySphere AI" }] }),
   component: Scan,
 });
 
+interface ScanResult {
+  title: string;
+  bullets: string[];
+}
+
 function Scan() {
   const [image, setImage] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "scanning" | "done">("idle");
+  const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">("idle");
+  const [result, setResult] = useState<ScanResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
 
-  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    setImage(URL.createObjectURL(f));
+    const dataUrl = await fileToDataUrl(f);
+    setImage(dataUrl);
     setStatus("scanning");
-    setTimeout(() => setStatus("done"), 1600);
+    setResult(null);
+    setErrorMsg("");
+
+    try {
+      const text = await groqChat(
+        [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: 'You are an expert note-taking assistant. Read this image of handwritten or printed study notes. Return a JSON object with exactly two fields: "title" (a short descriptive heading) and "bullets" (an array of 3–6 concise key-point strings). Respond with raw JSON only — no markdown, no explanation.',
+              },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+        GROQ_VISION_MODEL
+      );
+
+      const parsed: ScanResult = JSON.parse(text.replace(/```json|```/g, "").trim());
+      setResult(parsed);
+      setStatus("done");
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      setStatus("error");
+    }
   };
 
   return (
@@ -87,7 +123,20 @@ function Scan() {
             </GlassCard>
           )}
 
-          {status === "done" && (
+          {status === "error" && (
+            <GlassCard className="!p-4">
+              <p className="text-[13px] font-semibold text-red-500">Scan failed</p>
+              <p className="text-[12px] text-muted-foreground mt-1">{errorMsg}</p>
+              <button
+                onClick={() => { setImage(null); setStatus("idle"); }}
+                className="mt-3 tap text-[12.5px] font-medium text-[color:var(--primary)]"
+              >
+                Try again
+              </button>
+            </GlassCard>
+          )}
+
+          {status === "done" && result && (
             <>
               <GlassCard className="!p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -95,11 +144,9 @@ function Scan() {
                   <p className="text-[13px] font-semibold">Generated note</p>
                   <Pill tone="primary">AI</Pill>
                 </div>
-                <p className="text-[13.5px] font-medium">Quadratic Equations — Key Methods</p>
+                <p className="text-[13.5px] font-medium">{result.title}</p>
                 <ul className="mt-2 space-y-1.5 text-[12.5px] text-muted-foreground list-disc pl-4">
-                  <li>Standard form ax² + bx + c = 0</li>
-                  <li>Solve by factoring, completing the square, or quadratic formula</li>
-                  <li>Discriminant b² − 4ac tells you root nature</li>
+                  {result.bullets.map((b, i) => <li key={i}>{b}</li>)}
                 </ul>
               </GlassCard>
 

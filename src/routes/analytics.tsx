@@ -1,8 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TrendingUp, Sparkles, ChevronRight, Flame } from "lucide-react";
+import { TrendingUp, Sparkles, ChevronRight, Flame, BookOpen } from "lucide-react";
 import { MobileShell, PageHeader, Section } from "@/components/mobile/Shell";
 import { GlassCard, Sparkline, Pill } from "@/components/mobile/ui";
-import { studyHours, subjects } from "@/lib/mock";
+import { noteChapters } from "@/data/notes";
+import { IGCSE_SUBJECTS } from "@/data/past-papers/igcse-subjects";
+
+// Derive real stats from actual data
+const totalTopics = noteChapters.length;
+const totalSubjects = IGCSE_SUBJECTS.length;
+// Placeholder sparkline — 7 days of placeholder data (no hardcoded study activity)
+const studyHoursPlaceholder = [0, 0, 0, 0, 0, 0, 0];
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({ meta: [{ title: "Analytics — StudySphere AI" }] }),
@@ -40,27 +47,24 @@ function Analytics() {
             <p className="mono text-[28px] font-medium">19.0<span className="text-sm text-muted-foreground ml-1">hrs</span></p>
             <div className="flex items-center gap-1 text-[11px] text-success"><TrendingUp size={12} /> +2.4 hrs</div>
           </div>
-          <Sparkline data={studyHours} />
+          <Sparkline data={studyHoursPlaceholder} />
           <div className="flex justify-between mt-2 text-[10px] text-muted-foreground mono">
             <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
           </div>
         </GlassCard>
       </Section>
 
-      <Section title="Subject performance">
-        <GlassCard className="space-y-3">
-          {subjects.slice(0, 4).map((s) => (
-            <div key={s.slug}>
-              <div className="flex justify-between text-[12px] mb-1.5">
-                <span className="font-medium">{s.name}</span>
-                <span className="mono text-muted-foreground">{s.progress}%</span>
-              </div>
-              <div className="h-1.5 bg-glass-strong rounded-full overflow-hidden">
-                <div className="h-full gradient-primary" style={{ width: `${s.progress}%` }} />
-              </div>
-            </div>
-          ))}
-        </GlassCard>
+      <Section title="Content library">
+        <div className="grid grid-cols-2 gap-3">
+          <GlassCard className="!p-4 text-center">
+            <p className="text-[28px] font-bold" style={{ color: "#6d4cff" }}>{totalSubjects}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">IGCSE Subjects</p>
+          </GlassCard>
+          <GlassCard className="!p-4 text-center">
+            <p className="text-[28px] font-bold" style={{ color: "#6d4cff" }}>{totalTopics}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Note Topics</p>
+          </GlassCard>
+        </div>
       </Section>
 
       <Section title="Weak topics">

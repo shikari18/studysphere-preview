@@ -1,62 +1,168 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Search, Mic, Upload, Play, Sparkles as SparkIcon, Clock, Target, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Search, Mic, Upload, Sparkles as SparkIcon,
+  BookOpen, FileText, Scan, GraduationCap, BarChart2,
+  Calendar, Brain, Target, Layers, Play,
+} from "lucide-react";
 import { BotMark } from "@/components/BotMark";
 import { MobileShell, Section } from "@/components/mobile/Shell";
-import { GlassCard, Pill, ProgressRing } from "@/components/mobile/ui";
-import { subjects, exams, notes } from "@/lib/mock";
+import { GlassCard, Pill } from "@/components/mobile/ui";
+import { noteChapters } from "@/data/notes";
+import { IGCSE_SUBJECTS } from "@/data/past-papers/igcse-subjects";
+import logo from "@/assets/logo.png";
 
 export const Route = createFileRoute("/home")({
   head: () => ({ meta: [{ title: "Home — StudySphere AI" }] }),
   component: Home,
 });
 
+// Derive recent notes from real data (last 6 chapters)
+const recentNotes = noteChapters.slice(-6).reverse();
+
+// Popular subjects from real IGCSE list
+const popularSubjectCodes = ["0580", "0625", "0620", "0610", "0478", "0455"];
+const popularSubjects = popularSubjectCodes
+  .map((code) => IGCSE_SUBJECTS.find((s) => s.code === code))
+  .filter(Boolean) as typeof IGCSE_SUBJECTS;
+
+// Subject emoji map
+const SUBJECT_EMOJI: Record<string, string> = {
+  "0580": "∑", "0625": "⚛︎", "0620": "⚗︎",
+  "0610": "🧬", "0478": "💻", "0455": "$",
+  "0452": "📊", "0450": "📈", "0460": "🌍",
+  "0470": "📜", "0500": "✎", "0495": "👥",
+};
+
 function Home() {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const [recentStudy, setRecentStudy] = useState<{
+    subjectName: string;
+    subjectCode: string;
+    type: 'syllabus' | 'note' | 'paper';
+    title: string;
+    subInfo: string;
+    progress: number;
+    routePath: string;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("studysphere_recent_study");
+      if (saved) {
+        setRecentStudy(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const progress = recentStudy?.progress ?? 0;
+
   return (
     <MobileShell>
+      {/* Header */}
       <header className="px-5 pt-6 pb-2 flex items-center justify-between">
         <div>
-          <p className="text-xs text-muted-foreground">Good evening</p>
-          <h1 className="text-[26px] font-semibold tracking-tight">Shi</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Ready for 45 minutes of focused learning?</p>
+          <p className="text-xs text-muted-foreground">{greeting}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <img src={logo} className="w-7 h-7 rounded-lg object-contain" alt="StudySphere Logo" />
+            <h1 className="text-[26px] font-semibold tracking-tight">StudySphere</h1>
+          </div>
+          <p className="text-[13px] text-muted-foreground mt-1">What are we tackling today?</p>
         </div>
         <div className="w-11 h-11 rounded-full glass flex items-center justify-center font-semibold text-sm">S</div>
       </header>
 
+      {/* Search bar */}
       <div className="px-5 mt-5">
-        <div className="glass rounded-[18px] flex items-center gap-3 px-4 h-12">
-          <Search size={16} className="text-muted-foreground" />
-          <span className="text-[14px] text-muted-foreground flex-1">Search notes, topics, past papers…</span>
-        </div>
+        <Link to="/subjects">
+          <div className="glass rounded-[18px] flex items-center gap-3 px-4 h-12">
+            <Search size={16} className="text-muted-foreground" />
+            <span className="text-[14px] text-muted-foreground flex-1">Search subjects, notes, past papers…</span>
+          </div>
+        </Link>
         <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-          {["Quadratics", "IGCSE Physics", "WAEC 2022", "Organic chem"].map((c) => (
+          {["Past Papers", "Syllabus", "IGCSE Notes", "AI Tutor"].map((c) => (
             <Pill key={c}>{c}</Pill>
           ))}
         </div>
       </div>
 
-      <Section>
-        <GlassCard className="!p-0 overflow-hidden">
-          <div className="p-5 text-white" style={{ background: "linear-gradient(135deg,#0a0a0f 0%,#1a1a24 100%)" }}>
-            <p className="text-[11px] uppercase tracking-wider opacity-70">Continue studying</p>
-            <div className="flex items-center justify-between mt-2">
-              <div>
-                <h3 className="text-[18px] font-semibold">Quadratic Functions</h3>
-                <p className="text-[12px] opacity-70 mt-0.5">Mathematics · Chapter 4</p>
+      {/* Black Card: Continue Studying */}
+      <div className="px-5 mt-5">
+        <div className="bg-black text-white rounded-[24px] p-5 shadow-lg border border-neutral-900 relative overflow-hidden">
+          {recentStudy ? (
+            <div>
+              <div className="flex justify-between items-start">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground">Continue Studying</p>
+                  <h3 className="text-[16px] font-bold mt-1 text-white tracking-tight leading-tight truncate">{recentStudy.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{recentStudy.subInfo}</p>
+                </div>
+                <div className="relative flex-shrink-0 ml-4">
+                  <svg className="w-12 h-12">
+                    <circle cx="24" cy="24" r="18" stroke="rgba(255,255,255,0.15)" strokeWidth="3" fill="none" />
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r="18"
+                      stroke="#8b5cf6"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeDasharray="113"
+                      strokeDashoffset={113 - (113 * progress) / 100}
+                      strokeLinecap="round"
+                      transform="rotate(-90 24 24)"
+                    />
+                    <text x="24" y="27" className="text-[9px] font-bold fill-white" textAnchor="middle">
+                      {progress}%
+                    </text>
+                  </svg>
+                </div>
               </div>
-              <ProgressRing value={68} size={58} label="68%" />
-            </div>
-            <div className="flex gap-2 mt-5">
-              <button className="tap bg-white/10 backdrop-blur rounded-[14px] px-4 py-2.5 text-sm font-medium flex items-center gap-2 flex-1 justify-center border border-white/10">
-                <Play size={14} /> Resume
-              </button>
-              <button className="tap bg-white/10 border border-white/10 rounded-[14px] w-11 h-11 flex items-center justify-center" aria-label="Quick quiz">
-                <SparkIcon size={16} />
-              </button>
-            </div>
-          </div>
-        </GlassCard>
-      </Section>
 
+              <div className="flex gap-2 mt-4">
+                <Link
+                  to={recentStudy.routePath}
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white py-2.5 rounded-xl text-xs font-semibold transition-colors tap"
+                >
+                  <Play size={12} fill="white" />
+                  Resume
+                </Link>
+                <Link
+                  to="/tutor"
+                  className="w-9 h-9 flex items-center justify-center bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white rounded-xl transition-colors tap"
+                  aria-label="AI Help"
+                >
+                  <SparkIcon size={14} className="text-[#a78bfa]" />
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-4 text-center">
+              <p className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground self-start">Continue Studying</p>
+              <div className="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center mt-2 mb-3">
+                <BookOpen size={16} className="text-neutral-500" />
+              </div>
+              <h3 className="text-sm font-bold text-white tracking-tight">Your study card is empty</h3>
+              <p className="text-xs text-neutral-400 mt-1 max-w-[240px]">
+                Read a syllabus, note chapter, or past paper to see your progress card here.
+              </p>
+              <Link
+                to="/subjects"
+                className="mt-4 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold transition-all tap"
+              >
+                Browse Subjects
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* AI Tutor card */}
       <Section>
         <Link to="/tutor" className="block">
           <GlassCard className="flex items-center gap-3">
@@ -67,82 +173,119 @@ function Home() {
               <p className="text-[14px] font-bold">Ask StudySphere</p>
               <p className="text-[12px] text-muted-foreground truncate">Voice, photo or text — instant answers</p>
             </div>
-            <button className="w-9 h-9 rounded-full glass-strong flex items-center justify-center"><Mic size={14} /></button>
-            <button className="w-9 h-9 rounded-full glass-strong flex items-center justify-center"><Upload size={14} /></button>
+            <button className="w-9 h-9 rounded-full glass-strong flex items-center justify-center tap" aria-label="Voice"><Mic size={14} /></button>
+            <button className="w-9 h-9 rounded-full glass-strong flex items-center justify-center tap" aria-label="Upload"><Upload size={14} /></button>
           </GlassCard>
         </Link>
       </Section>
 
-      <Section title="Today">
-        <div className="grid grid-cols-2 gap-3">
-          <GlassCard className="!p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-[11px]"><Clock size={12} /> Focus time</div>
-            <p className="mono text-[24px] font-medium mt-2">32<span className="text-sm text-muted-foreground">m</span></p>
-            <p className="text-[11px] text-success mt-1">+12m vs avg</p>
-          </GlassCard>
-          <GlassCard className="!p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-[11px]"><Target size={12} /> Accuracy</div>
-            <p className="mono text-[24px] font-medium mt-2">78<span className="text-sm text-muted-foreground">%</span></p>
-            <p className="text-[11px] text-success mt-1">▲ 4%</p>
-          </GlassCard>
+      {/* Quick actions */}
+      <Section title="Quick actions">
+        <div className="grid grid-cols-3 gap-3">
+          <Link to="/past-papers">
+            <GlassCard className="!p-4 flex flex-col items-center gap-2 tap text-center">
+              <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
+                <FileText size={16} color="white" />
+              </div>
+              <p className="text-[12px] font-semibold">Past Papers</p>
+            </GlassCard>
+          </Link>
+          <Link to="/subjects">
+            <GlassCard className="!p-4 flex flex-col items-center gap-2 tap text-center">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#ff6b6b,#ff4757)" }}>
+                <BookOpen size={16} color="white" />
+              </div>
+              <p className="text-[12px] font-semibold">Syllabus</p>
+            </GlassCard>
+          </Link>
+          <Link to="/notes">
+            <GlassCard className="!p-4 flex flex-col items-center gap-2 tap text-center">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#2ed573,#1e90ff)" }}>
+                <Layers size={16} color="white" />
+              </div>
+              <p className="text-[12px] font-semibold">Notes</p>
+            </GlassCard>
+          </Link>
+          <Link to="/scan">
+            <GlassCard className="!p-4 flex flex-col items-center gap-2 tap text-center">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#a29bfe,#6c5ce7)" }}>
+                <Scan size={16} color="white" />
+              </div>
+              <p className="text-[12px] font-semibold">Scan Note</p>
+            </GlassCard>
+          </Link>
+          <Link to="/quiz">
+            <GlassCard className="!p-4 flex flex-col items-center gap-2 tap text-center">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#fdcb6e,#e17055)" }}>
+                <Brain size={16} color="white" />
+              </div>
+              <p className="text-[12px] font-semibold">Quiz</p>
+            </GlassCard>
+          </Link>
+          <Link to="/planner">
+            <GlassCard className="!p-4 flex flex-col items-center gap-2 tap text-center">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#55efc4,#00b894)" }}>
+                <Calendar size={16} color="white" />
+              </div>
+              <p className="text-[12px] font-semibold">Planner</p>
+            </GlassCard>
+          </Link>
         </div>
       </Section>
 
-      <Section title="Subjects" action={<Link to="/subjects" className="text-[12px] text-muted-foreground">See all</Link>}>
+      {/* Popular subjects */}
+      <Section title="Popular subjects" action={<Link to="/subjects" className="text-[12px] text-muted-foreground">See all</Link>}>
         <div className="flex gap-3 overflow-x-auto -mx-5 px-5 pb-1">
-          {subjects.slice(0, 4).map((s) => (
-            <GlassCard key={s.slug} className="!p-4 min-w-[140px]">
-              <div className="text-2xl">{s.icon}</div>
-              <p className="text-[13px] font-medium mt-2 truncate">{s.name}</p>
-              <div className="mt-2 h-1 bg-glass rounded-full overflow-hidden">
-                <div className="h-full gradient-primary" style={{ width: `${s.progress}%` }} />
-              </div>
-              <p className="mono text-[10px] text-muted-foreground mt-1.5">{s.progress}%</p>
-            </GlassCard>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="Upcoming exams">
-        <div className="space-y-2">
-          {exams.map((e) => (
-            <GlassCard key={e.name} className="!p-4 flex items-center justify-between">
-              <div>
-                <p className="text-[14px] font-medium">{e.name}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Mark your readiness</p>
-              </div>
-              <Pill tone={e.color === "purple" ? "purple" : "primary"}>{e.days} days</Pill>
-            </GlassCard>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="Recent notes" action={<Link to="/notes" className="text-[12px] text-muted-foreground">See all</Link>}>
-        <div className="space-y-2">
-          {notes.slice(0, 3).map((n) => (
-            <Link to="/notes" key={n.id}>
-              <GlassCard className="!p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-[12px] bg-glass-strong flex items-center justify-center text-[15px]">📝</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13.5px] font-medium truncate">{n.title}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{n.subject} · {n.edited}</p>
-                </div>
-                <ChevronRight size={16} className="text-muted-foreground" />
+          {popularSubjects.map((s) => (
+            <Link key={s.code} to="/subjects">
+              <GlassCard className="!p-4 min-w-[130px]">
+                <div className="text-2xl">{SUBJECT_EMOJI[s.code] ?? "📚"}</div>
+                <p className="text-[12.5px] font-medium mt-2 truncate">{s.name}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{s.code}</p>
               </GlassCard>
             </Link>
           ))}
         </div>
       </Section>
 
-      <Section title="Quick actions">
-        <div className="grid grid-cols-2 gap-3">
-          <Link to="/scan"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Scan note</p><p className="text-[11px] text-muted-foreground mt-1">Snap → AI note</p></GlassCard></Link>
-          <Link to="/dashboard"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Dashboard</p><p className="text-[11px] text-muted-foreground mt-1">Free jot · images</p></GlassCard></Link>
-          <Link to="/quiz"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Generate quiz</p><p className="text-[11px] text-muted-foreground mt-1">From notes or topic</p></GlassCard></Link>
-          <Link to="/planner"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Plan my week</p><p className="text-[11px] text-muted-foreground mt-1">AI study schedule</p></GlassCard></Link>
-          <Link to="/focus"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Focus mode</p><p className="text-[11px] text-muted-foreground mt-1">Pomodoro · sounds</p></GlassCard></Link>
-          <Link to="/analytics"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Insights</p><p className="text-[11px] text-muted-foreground mt-1">This week</p></GlassCard></Link>
+      {/* Recent notes from real data */}
+      <Section title="Study notes" action={<Link to="/notes" className="text-[12px] text-muted-foreground">See all</Link>}>
+        <div className="space-y-2">
+          {recentNotes.slice(0, 4).map((n, i) => (
+            <Link to="/notes" key={i}>
+              <GlassCard className="!p-4 flex items-center gap-3 tap">
+                <div className="w-10 h-10 rounded-[12px] gradient-primary flex items-center justify-center flex-shrink-0">
+                  <BookOpen size={14} color="white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium truncate">{n.title}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{n.subject} · {n.pages?.length ?? 0} sections</p>
+                </div>
+              </GlassCard>
+            </Link>
+          ))}
         </div>
+      </Section>
+
+      {/* Cambridge IGCSE stats */}
+      <Section>
+        <GlassCard className="!p-5">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Cambridge IGCSE</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <p className="text-[22px] font-bold" style={{ color: "#6d4cff" }}>{IGCSE_SUBJECTS.length}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Subjects</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[22px] font-bold" style={{ color: "#6d4cff" }}>{noteChapters.length}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Note topics</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[22px] font-bold" style={{ color: "#6d4cff" }}>2024</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Latest year</p>
+            </div>
+          </div>
+        </GlassCard>
       </Section>
     </MobileShell>
   );

@@ -14,7 +14,7 @@ function Profile() {
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const handleSignOut = () => {
-    try { localStorage.removeItem("viora-theme"); } catch {}
+    try { localStorage.removeItem("studysphere-theme"); } catch {}
     navigate({ to: "/login" });
   };
   return (
