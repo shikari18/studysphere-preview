@@ -136,6 +136,8 @@ function Home() {
 
       <Section title="Quick actions">
         <div className="grid grid-cols-2 gap-3">
+          <Link to="/scan"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Scan note</p><p className="text-[11px] text-muted-foreground mt-1">Snap → AI note</p></GlassCard></Link>
+          <Link to="/dashboard"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Dashboard</p><p className="text-[11px] text-muted-foreground mt-1">Free jot · images</p></GlassCard></Link>
           <Link to="/quiz"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Generate quiz</p><p className="text-[11px] text-muted-foreground mt-1">From notes or topic</p></GlassCard></Link>
           <Link to="/planner"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Plan my week</p><p className="text-[11px] text-muted-foreground mt-1">AI study schedule</p></GlassCard></Link>
           <Link to="/focus"><GlassCard className="!p-4"><p className="text-[13px] font-medium">Focus mode</p><p className="text-[11px] text-muted-foreground mt-1">Pomodoro · sounds</p></GlassCard></Link>
