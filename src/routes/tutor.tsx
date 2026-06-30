@@ -56,7 +56,7 @@ function Tutor() {
               <BotMark size={20} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-[15px] font-semibold tracking-tight leading-tight truncate">StudySphere</h1>
+              <h1 className="text-[15px] font-bold tracking-tight leading-tight truncate">StudySphere</h1>
               <p className="text-[11px] text-muted-foreground leading-tight">Online · AI tutor</p>
             </div>
           </div>
