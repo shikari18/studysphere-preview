@@ -16,7 +16,7 @@ export function MobileShell({ children, hideNav = false }: { children: ReactNode
 
   return (
     <div className="mobile-frame">
-      <div className="relative pb-32 anim-in">{children}</div>
+      <div className={`relative anim-in ${hideNav ? "" : "pb-32"}`}>{children}</div>
 
       {!hideNav && (
         <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-[388px]">
