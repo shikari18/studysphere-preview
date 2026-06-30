@@ -170,24 +170,27 @@ function CallSession({ onEnd }: { onEnd: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex flex-col items-center justify-between text-white anim-in"
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-between anim-in text-slate-900"
       style={{
         background:
-          "radial-gradient(120% 80% at 50% 0%, #2a1455 0%, #0a0a14 60%, #050509 100%)",
+          "radial-gradient(120% 80% at 50% 0%, #efe7ff 0%, #f7f3ff 45%, #ffffff 100%)",
       }}
     >
       <div className="pt-14 text-center px-6">
-        <p className="text-[11px] uppercase tracking-[0.2em] opacity-60">Live class · {mm}:{ss}</p>
-        <h2 className="mt-2 text-[22px] font-semibold tracking-tight">StudySphere</h2>
-        <p className="text-[12px] opacity-70 mt-1">Listening — ask anything out loud</p>
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--primary)]/70 font-semibold">Live class · {mm}:{ss}</p>
+        <h2 className="mt-2 text-[24px] font-bold tracking-tight">StudySphere</h2>
+        <p className="text-[12px] text-slate-500 mt-1">Listening — ask anything out loud</p>
       </div>
 
       <div className="flex-1 flex items-center justify-center w-full">
         <div className="relative">
-          <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "radial-gradient(circle, rgba(176,124,255,0.35), transparent 70%)" }} />
-          <span className="absolute -inset-6 rounded-full animate-pulse" style={{ background: "radial-gradient(circle, rgba(124,92,255,0.18), transparent 70%)" }} />
-          <div className="relative w-40 h-40 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c5cff,#b07cff)" }}>
-            <BotMark size={72} withGradient={false} className="text-white" />
+          <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "radial-gradient(circle, rgba(176,124,255,0.45), transparent 70%)" }} />
+          <span className="absolute -inset-8 rounded-full animate-pulse" style={{ background: "radial-gradient(circle, rgba(124,92,255,0.22), transparent 70%)" }} />
+          <div
+            className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-[0_20px_60px_-15px_rgba(124,92,255,0.55)]"
+            style={{ background: "linear-gradient(135deg,#a78bfa,#c4a8ff)" }}
+          >
+            <BotMark size={76} withGradient={false} className="text-white" />
           </div>
         </div>
       </div>
@@ -195,26 +198,26 @@ function CallSession({ onEnd }: { onEnd: () => void }) {
       <div className="px-6 pb-12 w-full max-w-[420px]">
         <div className="flex flex-wrap gap-2 justify-center mb-6">
           {["Quiz me on this", "Slow down", "Give an example"].map((c) => (
-            <span key={c} className="px-3 py-1.5 rounded-full text-[11px] bg-white/10 border border-white/10">{c}</span>
+            <span key={c} className="px-3 py-1.5 rounded-full text-[11px] font-medium bg-white/80 border border-[color:var(--primary)]/15 text-slate-700 shadow-sm backdrop-blur">{c}</span>
           ))}
         </div>
         <div className="flex items-center justify-center gap-5">
           <button
             onClick={() => setMuted((m) => !m)}
-            className="w-14 h-14 rounded-full bg-white/10 backdrop-blur border border-white/15 flex items-center justify-center tap"
+            className="w-14 h-14 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center tap text-slate-700"
             aria-label="Mute"
           >
             {muted ? <MicOff size={20} /> : <Mic size={20} />}
           </button>
           <button
             onClick={onEnd}
-            className="w-16 h-16 rounded-full flex items-center justify-center tap shadow-[0_10px_30px_-10px_rgba(255,60,80,0.6)]"
-            style={{ background: "linear-gradient(135deg,#ff4d6d,#c81d3a)" }}
+            className="w-16 h-16 rounded-full flex items-center justify-center tap shadow-[0_12px_30px_-8px_rgba(255,80,100,0.55)]"
+            style={{ background: "linear-gradient(135deg,#ff5d7a,#e02447)" }}
             aria-label="End call"
           >
             <PhoneOff size={22} color="white" />
           </button>
-          <button className="w-14 h-14 rounded-full bg-white/10 backdrop-blur border border-white/15 flex items-center justify-center tap" aria-label="Speaker">
+          <button className="w-14 h-14 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center tap text-slate-700" aria-label="Speaker">
             <Volume2 size={20} />
           </button>
         </div>
