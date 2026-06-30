@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Crown, Flame, Award, BookmarkCheck, FileText, Settings, HelpCircle, LogOut, ChevronRight, Moon, Sun } from "lucide-react";
 import { MobileShell, PageHeader, Section } from "@/components/mobile/Shell";
 import { GlassCard, Pill } from "@/components/mobile/ui";
