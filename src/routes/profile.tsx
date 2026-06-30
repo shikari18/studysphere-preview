@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Crown, Flame, Award, BookmarkCheck, FileText, Settings, HelpCircle, LogOut, ChevronRight, Moon, Sun } from "lucide-react";
 import { MobileShell, PageHeader, Section } from "@/components/mobile/Shell";
 import { GlassCard, Pill } from "@/components/mobile/ui";
@@ -6,12 +6,17 @@ import { useTheme } from "@/lib/theme";
 
 
 export const Route = createFileRoute("/profile")({
-  head: () => ({ meta: [{ title: "Profile — Viora AI" }] }),
+  head: () => ({ meta: [{ title: "Profile — StudySphere AI" }] }),
   component: Profile,
 });
 
 function Profile() {
   const { theme, toggle } = useTheme();
+  const navigate = useNavigate();
+  const handleSignOut = () => {
+    try { localStorage.removeItem("viora-theme"); } catch {}
+    navigate({ to: "/login" });
+  };
   return (
     <MobileShell>
 
@@ -88,11 +93,11 @@ function Profile() {
             <span className="text-[12px] text-muted-foreground capitalize">{theme}</span>
           </button>
           {[
-            { i: Settings, t: "Account & preferences" },
-            { i: HelpCircle, t: "Help & support" },
-            { i: LogOut, t: "Sign out", danger: true },
+            { i: Settings, t: "Account & preferences", onClick: () => {} },
+            { i: HelpCircle, t: "Help & support", onClick: () => {} },
+            { i: LogOut, t: "Sign out", danger: true, onClick: handleSignOut },
           ].map((r) => (
-            <button key={r.t} className="w-full flex items-center gap-3 px-4 py-3.5 tap text-left">
+            <button key={r.t} onClick={r.onClick} className="w-full flex items-center gap-3 px-4 py-3.5 tap text-left">
               <div className="w-9 h-9 rounded-[10px] bg-glass-strong flex items-center justify-center"><r.i size={15} /></div>
               <span className={`flex-1 text-[13.5px] font-medium ${r.danger ? "text-[color:var(--destructive)]" : ""}`}>{r.t}</span>
               <ChevronRight size={15} className="text-muted-foreground" />
@@ -101,7 +106,7 @@ function Profile() {
         </div>
 
         <div className="mt-4 flex items-center justify-center gap-1.5">
-          <Pill>v1.0 · Viora AI</Pill>
+          <Pill>v1.0 · StudySphere AI</Pill>
         </div>
       </Section>
     </MobileShell>

@@ -6,7 +6,7 @@ import { GlassCard, Pill, PrimaryButton } from "@/components/mobile/ui";
 import { BotMark } from "@/components/BotMark";
 
 export const Route = createFileRoute("/scan")({
-  head: () => ({ meta: [{ title: "Scan Note — Viora AI" }] }),
+  head: () => ({ meta: [{ title: "Scan Note — StudySphere AI" }] }),
   component: Scan,
 });
 
@@ -42,7 +42,7 @@ function Scan() {
             </div>
             <p className="mt-4 text-[15px] font-semibold">Snap a page</p>
             <p className="text-[12px] text-muted-foreground mt-1">
-              Viora extracts text, structures it, and generates a clean note.
+              StudySphere extracts text, structures it, and generates a clean note.
             </p>
             <div className="grid grid-cols-2 gap-2 mt-5">
               <button onClick={() => camRef.current?.click()} className="tap gradient-primary text-white rounded-[14px] py-3 text-[13px] font-medium flex items-center justify-center gap-1.5">
@@ -57,7 +57,7 @@ function Scan() {
           </GlassCard>
 
           <GlassCard className="!p-4">
-            <p className="text-[12px] font-semibold mb-2">What Viora does</p>
+            <p className="text-[12px] font-semibold mb-2">What StudySphere does</p>
             <ul className="space-y-2 text-[12.5px] text-muted-foreground">
               {["Reads handwriting & printed text", "Cleans & structures into sections", "Suggests flashcards & a quiz"].map((t) => (
                 <li key={t} className="flex items-start gap-2">

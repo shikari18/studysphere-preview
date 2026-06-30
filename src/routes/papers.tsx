@@ -5,7 +5,7 @@ import { GlassCard, Pill } from "@/components/mobile/ui";
 import { examBoards, pastQuestions } from "@/lib/mock";
 
 export const Route = createFileRoute("/papers")({
-  head: () => ({ meta: [{ title: "Past Papers — Viora AI" }] }),
+  head: () => ({ meta: [{ title: "Past Papers — StudySphere AI" }] }),
   component: Papers,
 });
 

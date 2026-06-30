@@ -53,10 +53,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "Viora AI — Your personal AI tutor" },
+      { title: "StudySphere AI — Your personal AI tutor" },
       { name: "description", content: "Premium mobile study app: AI tutor, smart notes, quizzes, flashcards, past papers and focus mode." },
       { name: "theme-color", content: "#070A12" },
-      { property: "og:title", content: "Viora AI" },
+      { property: "og:title", content: "StudySphere AI" },
       { property: "og:description", content: "Study smarter with a luxury AI tutor." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
