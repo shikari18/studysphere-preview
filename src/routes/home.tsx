@@ -64,7 +64,7 @@ function Home() {
               <BotMark size={18} withGradient={false} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium">Ask StudySphere</p>
+              <p className="text-[14px] font-bold">Ask StudySphere</p>
               <p className="text-[12px] text-muted-foreground truncate">Voice, photo or text — instant answers</p>
             </div>
             <button className="w-9 h-9 rounded-full glass-strong flex items-center justify-center"><Mic size={14} /></button>
