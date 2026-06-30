@@ -12,6 +12,11 @@ export const Route = createFileRoute("/profile")({
 
 function Profile() {
   const { theme, toggle } = useTheme();
+  const navigate = useNavigate();
+  const handleSignOut = () => {
+    try { localStorage.removeItem("viora-theme"); } catch {}
+    navigate({ to: "/login" });
+  };
   return (
     <MobileShell>
 
