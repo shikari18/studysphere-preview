@@ -9,8 +9,86 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TutorRouteImport } from './routes/tutor'
+import { Route as SubjectsRouteImport } from './routes/subjects'
+import { Route as QuizRouteImport } from './routes/quiz'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PlannerRouteImport } from './routes/planner'
+import { Route as PapersRouteImport } from './routes/papers'
+import { Route as NotesRouteImport } from './routes/notes'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as HomeRouteImport } from './routes/home'
+import { Route as FocusRouteImport } from './routes/focus'
+import { Route as FlashcardsRouteImport } from './routes/flashcards'
+import { Route as BillingRouteImport } from './routes/billing'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TutorRoute = TutorRouteImport.update({
+  id: '/tutor',
+  path: '/tutor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubjectsRoute = SubjectsRouteImport.update({
+  id: '/subjects',
+  path: '/subjects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuizRoute = QuizRouteImport.update({
+  id: '/quiz',
+  path: '/quiz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlannerRoute = PlannerRouteImport.update({
+  id: '/planner',
+  path: '/planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PapersRoute = PapersRouteImport.update({
+  id: '/papers',
+  path: '/papers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotesRoute = NotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FocusRoute = FocusRouteImport.update({
+  id: '/focus',
+  path: '/focus',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlashcardsRoute = FlashcardsRouteImport.update({
+  id: '/flashcards',
+  path: '/flashcards',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingRoute = BillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +97,214 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
+  '/billing': typeof BillingRoute
+  '/flashcards': typeof FlashcardsRoute
+  '/focus': typeof FocusRoute
+  '/home': typeof HomeRoute
+  '/login': typeof LoginRoute
+  '/notes': typeof NotesRoute
+  '/papers': typeof PapersRoute
+  '/planner': typeof PlannerRoute
+  '/profile': typeof ProfileRoute
+  '/quiz': typeof QuizRoute
+  '/subjects': typeof SubjectsRoute
+  '/tutor': typeof TutorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
+  '/billing': typeof BillingRoute
+  '/flashcards': typeof FlashcardsRoute
+  '/focus': typeof FocusRoute
+  '/home': typeof HomeRoute
+  '/login': typeof LoginRoute
+  '/notes': typeof NotesRoute
+  '/papers': typeof PapersRoute
+  '/planner': typeof PlannerRoute
+  '/profile': typeof ProfileRoute
+  '/quiz': typeof QuizRoute
+  '/subjects': typeof SubjectsRoute
+  '/tutor': typeof TutorRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
+  '/billing': typeof BillingRoute
+  '/flashcards': typeof FlashcardsRoute
+  '/focus': typeof FocusRoute
+  '/home': typeof HomeRoute
+  '/login': typeof LoginRoute
+  '/notes': typeof NotesRoute
+  '/papers': typeof PapersRoute
+  '/planner': typeof PlannerRoute
+  '/profile': typeof ProfileRoute
+  '/quiz': typeof QuizRoute
+  '/subjects': typeof SubjectsRoute
+  '/tutor': typeof TutorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/analytics'
+    | '/billing'
+    | '/flashcards'
+    | '/focus'
+    | '/home'
+    | '/login'
+    | '/notes'
+    | '/papers'
+    | '/planner'
+    | '/profile'
+    | '/quiz'
+    | '/subjects'
+    | '/tutor'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/analytics'
+    | '/billing'
+    | '/flashcards'
+    | '/focus'
+    | '/home'
+    | '/login'
+    | '/notes'
+    | '/papers'
+    | '/planner'
+    | '/profile'
+    | '/quiz'
+    | '/subjects'
+    | '/tutor'
+  id:
+    | '__root__'
+    | '/'
+    | '/analytics'
+    | '/billing'
+    | '/flashcards'
+    | '/focus'
+    | '/home'
+    | '/login'
+    | '/notes'
+    | '/papers'
+    | '/planner'
+    | '/profile'
+    | '/quiz'
+    | '/subjects'
+    | '/tutor'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalyticsRoute: typeof AnalyticsRoute
+  BillingRoute: typeof BillingRoute
+  FlashcardsRoute: typeof FlashcardsRoute
+  FocusRoute: typeof FocusRoute
+  HomeRoute: typeof HomeRoute
+  LoginRoute: typeof LoginRoute
+  NotesRoute: typeof NotesRoute
+  PapersRoute: typeof PapersRoute
+  PlannerRoute: typeof PlannerRoute
+  ProfileRoute: typeof ProfileRoute
+  QuizRoute: typeof QuizRoute
+  SubjectsRoute: typeof SubjectsRoute
+  TutorRoute: typeof TutorRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tutor': {
+      id: '/tutor'
+      path: '/tutor'
+      fullPath: '/tutor'
+      preLoaderRoute: typeof TutorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subjects': {
+      id: '/subjects'
+      path: '/subjects'
+      fullPath: '/subjects'
+      preLoaderRoute: typeof SubjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quiz': {
+      id: '/quiz'
+      path: '/quiz'
+      fullPath: '/quiz'
+      preLoaderRoute: typeof QuizRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planner': {
+      id: '/planner'
+      path: '/planner'
+      fullPath: '/planner'
+      preLoaderRoute: typeof PlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/papers': {
+      id: '/papers'
+      path: '/papers'
+      fullPath: '/papers'
+      preLoaderRoute: typeof PapersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notes': {
+      id: '/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof NotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/focus': {
+      id: '/focus'
+      path: '/focus'
+      fullPath: '/focus'
+      preLoaderRoute: typeof FocusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flashcards': {
+      id: '/flashcards'
+      path: '/flashcards'
+      fullPath: '/flashcards'
+      preLoaderRoute: typeof FlashcardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,17 +317,20 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalyticsRoute: AnalyticsRoute,
+  BillingRoute: BillingRoute,
+  FlashcardsRoute: FlashcardsRoute,
+  FocusRoute: FocusRoute,
+  HomeRoute: HomeRoute,
+  LoginRoute: LoginRoute,
+  NotesRoute: NotesRoute,
+  PapersRoute: PapersRoute,
+  PlannerRoute: PlannerRoute,
+  ProfileRoute: ProfileRoute,
+  QuizRoute: QuizRoute,
+  SubjectsRoute: SubjectsRoute,
+  TutorRoute: TutorRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
