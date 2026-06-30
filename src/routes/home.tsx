@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Search, Mic, Upload, Sparkles as SparkIcon,
   BookOpen, FileText, Scan, GraduationCap, BarChart2,
-  Calendar, Brain, Target, Layers, Play,
+  Calendar, Brain, Target, Layers, Play, Clock,
 } from "lucide-react";
 import { BotMark } from "@/components/BotMark";
 import { MobileShell, Section } from "@/components/mobile/Shell";
@@ -267,25 +267,31 @@ function Home() {
         </div>
       </Section>
 
-      {/* Cambridge IGCSE stats */}
-      <Section>
-        <GlassCard className="!p-5">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Cambridge IGCSE</p>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center">
-              <p className="text-[22px] font-bold" style={{ color: "#6d4cff" }}>{IGCSE_SUBJECTS.length}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Subjects</p>
+      {/* Today Stats */}
+      <Section title="Today">
+        <div className="grid grid-cols-2 gap-3">
+          <GlassCard className="!p-4">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock size={14} className="text-[#a78bfa]" />
+              <span className="text-[11.5px] font-medium">Focus time</span>
             </div>
-            <div className="text-center">
-              <p className="text-[22px] font-bold" style={{ color: "#6d4cff" }}>{noteChapters.length}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Note topics</p>
+            <p className="text-[24px] font-bold mt-2 text-foreground">
+              32<span className="text-xs font-semibold ml-0.5">m</span>
+            </p>
+            <p className="text-[10px] text-emerald-500 font-medium mt-1">+12m vs avg</p>
+          </GlassCard>
+          
+          <GlassCard className="!p-4">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Target size={14} className="text-[#a78bfa]" />
+              <span className="text-[11.5px] font-medium">Accuracy</span>
             </div>
-            <div className="text-center">
-              <p className="text-[22px] font-bold" style={{ color: "#6d4cff" }}>2024</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Latest year</p>
-            </div>
-          </div>
-        </GlassCard>
+            <p className="text-[24px] font-bold mt-2 text-foreground">
+              78<span className="text-xs font-semibold ml-0.5">%</span>
+            </p>
+            <p className="text-[10px] text-emerald-500 font-medium mt-1">▲ 4%</p>
+          </GlassCard>
+        </div>
       </Section>
     </MobileShell>
   );

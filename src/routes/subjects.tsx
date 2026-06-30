@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from "react";
 import {
   Search, ChevronRight, X, FileText, ExternalLink, Loader2,
   BookOpen, Beaker, Calculator, Globe, Laptop, Palette, Briefcase, Languages, GraduationCap,
-  Eye, CheckCircle2,
+  Eye, CheckCircle2, Layers,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile/Shell";
 import {
