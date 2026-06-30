@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TutorRouteImport } from './routes/tutor'
 import { Route as SubjectsRouteImport } from './routes/subjects'
+import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QuizRouteImport } from './routes/quiz'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PlannerRouteImport } from './routes/planner'
@@ -33,6 +34,11 @@ const TutorRoute = TutorRouteImport.update({
 const SubjectsRoute = SubjectsRouteImport.update({
   id: '/subjects',
   path: '/subjects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScanRoute = ScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const QuizRoute = QuizRouteImport.update({
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/planner': typeof PlannerRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
+  '/scan': typeof ScanRoute
   '/subjects': typeof SubjectsRoute
   '/tutor': typeof TutorRoute
 }
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/planner': typeof PlannerRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
+  '/scan': typeof ScanRoute
   '/subjects': typeof SubjectsRoute
   '/tutor': typeof TutorRoute
 }
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/planner': typeof PlannerRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
+  '/scan': typeof ScanRoute
   '/subjects': typeof SubjectsRoute
   '/tutor': typeof TutorRoute
 }
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/planner'
     | '/profile'
     | '/quiz'
+    | '/scan'
     | '/subjects'
     | '/tutor'
   fileRoutesByTo: FileRoutesByTo
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/planner'
     | '/profile'
     | '/quiz'
+    | '/scan'
     | '/subjects'
     | '/tutor'
   id:
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/planner'
     | '/profile'
     | '/quiz'
+    | '/scan'
     | '/subjects'
     | '/tutor'
   fileRoutesById: FileRoutesById
@@ -221,6 +233,7 @@ export interface RootRouteChildren {
   PlannerRoute: typeof PlannerRoute
   ProfileRoute: typeof ProfileRoute
   QuizRoute: typeof QuizRoute
+  ScanRoute: typeof ScanRoute
   SubjectsRoute: typeof SubjectsRoute
   TutorRoute: typeof TutorRoute
 }
@@ -239,6 +252,13 @@ declare module '@tanstack/react-router' {
       path: '/subjects'
       fullPath: '/subjects'
       preLoaderRoute: typeof SubjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scan': {
+      id: '/scan'
+      path: '/scan'
+      fullPath: '/scan'
+      preLoaderRoute: typeof ScanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/quiz': {
@@ -349,6 +369,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlannerRoute: PlannerRoute,
   ProfileRoute: ProfileRoute,
   QuizRoute: QuizRoute,
+  ScanRoute: ScanRoute,
   SubjectsRoute: SubjectsRoute,
   TutorRoute: TutorRoute,
 }
