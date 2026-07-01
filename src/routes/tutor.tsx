@@ -184,9 +184,28 @@ Your single goal: by the end of every session, the student should feel slightly 
                   <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     <BotMark size={12} /> StudySphere
                   </div>
-                  <div className="text-[14px] leading-relaxed text-foreground prose-sm">
-                    {renderMarkdown(m.text)}
-                  </div>
+                  {m.callSummary ? (
+                    <div className="glass rounded-[18px] p-3 flex items-center justify-between gap-3 min-w-[260px] border border-hairline bg-glass select-none">
+                      <div className="flex items-center gap-2.5 text-[13.5px] font-medium text-foreground">
+                        <span className="w-8 h-8 rounded-full bg-glass-strong flex-shrink-0 flex items-center justify-center text-muted-foreground">
+                          <PhoneOff size={13} />
+                        </span>
+                        <span>Voice Call ended · {m.callSummary.duration}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 opacity-60">
+                        <span className="w-7 h-7 rounded-full bg-glass flex items-center justify-center text-muted-foreground pointer-events-none">
+                          <ThumbsUp size={12} />
+                        </span>
+                        <span className="w-7 h-7 rounded-full bg-glass flex items-center justify-center text-muted-foreground pointer-events-none">
+                          <ThumbsDown size={12} />
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[14px] leading-relaxed text-foreground prose-sm">
+                      {renderMarkdown(m.text)}
+                    </div>
+                  )}
                   {m.card && (
                     <GlassCard className="!p-4 !rounded-2xl">
                       <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground mb-2.5">Steps</p>
@@ -273,13 +292,28 @@ Your single goal: by the end of every session, the student should feel slightly 
         </div>
       </div>
 
-      {inCall && <GeminiCallSession onEnd={() => setInCall(false)} />}
+      {inCall && (
+        <GeminiCallSession
+          onEnd={(durationSeconds) => {
+            setInCall(false);
+            if (durationSeconds > 0) {
+              const min = Math.floor(durationSeconds / 60);
+              const sec = durationSeconds % 60;
+              const durationStr = `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+              setMessages((m) => [
+                ...m,
+                { role: "ai", text: `Voice Call ended · ${durationStr}`, callSummary: { duration: durationStr } }
+              ]);
+            }
+          }}
+        />
+      )}
     </MobileShell>
   );
 }
 
 // ─── Gemini Live API Call Session ─────────────────────────────────────────────
-function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
+function GeminiCallSession({ onEnd }: { onEnd: (durationSeconds: number) => void }) {
   const [status, setStatus] = useState<"connecting" | "listening" | "speaking" | "error">("connecting");
   const [muted, setMuted] = useState(false);
   const [secs, setSecs] = useState(0);
@@ -439,7 +473,7 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
               },
               system_instruction: {
                 parts: [{
-                  text: `You are StudySphere, a warm and encouraging AI study tutor for IGCSE and secondary school students. Speak naturally and warmly. Keep responses concise — under 3 sentences each turn. Sound like a brilliant older sister who loves teaching. Never say you are an AI. Say 'does that make sense?' occasionally. Start by greeting the student.
+                  text: `You are StudySphere, a warm and encouraging AI study tutor for IGCSE and secondary school students. You were created by Sphere AI. The current date and time is ${new Date().toString()}. Speak naturally and warmly. Keep responses concise — under 3 sentences each turn. Sound like a brilliant older sister who loves teaching. Never say you are an AI. Say 'does that make sense?' occasionally. Start by greeting the student.
 
 Always implement these tutoring guidelines during the session:
 1. Context Lock: Keep the session strictly focused on academic study/revision. Gently redirect if the user drifts off-topic.
@@ -589,7 +623,7 @@ Always implement these tutoring guidelines during the session:
     const ctx = audioCtxRef.current;
     if (ctx && ctx.state !== "closed") { ctx.close().catch(() => {}); }
     audioCtxRef.current = null;
-    onEnd();
+    onEnd(secs);
   };
 
   const mm = String(Math.floor(secs / 60)).padStart(2, "0");

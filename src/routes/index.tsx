@@ -44,7 +44,7 @@ function Onboarding() {
 
   return (
     <div
-      className="min-h-[100dvh] flex flex-col"
+      className="h-[100dvh] overflow-hidden flex flex-col"
       style={{ background: "#ffffff", color: "#0b0b14" }}
     >
       <header className="px-6 pt-8 flex items-center gap-2.5">

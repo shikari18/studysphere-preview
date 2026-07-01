@@ -164,13 +164,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile frame for desktop preview */
 .mobile-frame {
   width: 100%;
   max-width: 420px;
   min-height: 100dvh;
   margin: 0 auto;
   position: relative;
+  background-color: var(--background);
 }
 
 /* Scrollbar */
