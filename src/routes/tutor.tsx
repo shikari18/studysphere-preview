@@ -52,11 +52,11 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-// ─── Image generation via Gemini 2.0 Flash (native image output) ─────────────
+// ─── Image generation via Gemini 2.5 Flash Image ────────────────────────────
 async function generateImageGemini(prompt: string): Promise<string> {
   const key = import.meta.env.VITE_GEMINI_API_KEY as string;
-  // gemini-2.0-flash-preview-image-generation supports TEXT+IMAGE output via generateContent
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`;
+  // gemini-2.5-flash-image supports generateContent with IMAGE responseModality
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -72,7 +72,6 @@ async function generateImageGemini(prompt: string): Promise<string> {
     throw new Error(`Image generation failed (${res.status}): ${errText}`);
   }
   const data = await res.json();
-  // Walk all parts looking for an inlineData image
   const parts: any[] = data.candidates?.[0]?.content?.parts ?? [];
   for (const part of parts) {
     if (part.inlineData?.mimeType?.startsWith("image/") && part.inlineData?.data) {
