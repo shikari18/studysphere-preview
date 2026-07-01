@@ -106,8 +106,11 @@ export default defineConfig({
           changeOrigin: true,
           ws: true,
           rewrite: () => {
-            const key = process.env.VITE_GEMINI_API_KEY || "AQ.Ab8RN6Lq-UQys-_ZeYVAcF6GkJAUKLaEPpjjZON73xBeQFhXdQ";
-            return `/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${key}`;
+            const key = process.env.VITE_GEMINI_API_KEY;
+            if (!key) {
+              console.warn("WARNING: VITE_GEMINI_API_KEY is not defined in your environment/dotenv files! Gemini Live calls will fail.");
+            }
+            return `/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${key || ""}`;
           },
           headers: {
             "Origin": "https://generativelanguage.googleapis.com",

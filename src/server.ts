@@ -41,7 +41,10 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     const urlObj = new URL(request.url);
     if (urlObj.pathname === "/api/ws-gemini") {
-      const key = (env as any)?.GEMINI_API_KEY || (env as any)?.VITE_GEMINI_API_KEY || "AQ.Ab8RN6Lq-UQys-_ZeYVAcF6GkJAUKLaEPpjjZON73xBeQFhXdQ";
+      const key = (env as any)?.GEMINI_API_KEY || (env as any)?.VITE_GEMINI_API_KEY;
+      if (!key) {
+        return new Response("Missing GEMINI_API_KEY environment variable. Set it in your Render settings.", { status: 401 });
+      }
       const targetUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${key}`;
       const headers = new Headers(request.headers);
       headers.set("Origin", "https://generativelanguage.googleapis.com");
