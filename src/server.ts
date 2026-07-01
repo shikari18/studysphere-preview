@@ -40,6 +40,19 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     const urlObj = new URL(request.url);
+    if (urlObj.pathname === "/api/ws-gemini") {
+      const targetUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=AQ.Ab8RN6Lq-UQys-_ZeYVAcF6GkJAUKLaEPpjjZON73xBeQFhXdQ`;
+      const headers = new Headers(request.headers);
+      headers.set("Origin", "https://generativelanguage.googleapis.com");
+      try {
+        return await fetch(targetUrl, {
+          headers,
+        });
+      } catch (err: any) {
+        return new Response(`WebSocket proxy error: ${err.message}`, { status: 502 });
+      }
+    }
+
     if (urlObj.pathname === "/api/pdf-proxy") {
       const targetUrl = urlObj.searchParams.get("url");
       if (!targetUrl) {

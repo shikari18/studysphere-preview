@@ -99,6 +99,19 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    server: {
+      proxy: {
+        "/api/ws-gemini": {
+          target: "wss://generativelanguage.googleapis.com",
+          changeOrigin: true,
+          ws: true,
+          rewrite: () => "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=AQ.Ab8RN6Lq-UQys-_ZeYVAcF6GkJAUKLaEPpjjZON73xBeQFhXdQ",
+          headers: {
+            "Origin": "https://generativelanguage.googleapis.com",
+          },
+        },
+      },
+    },
     plugins: [pdfProxyPlugin()],
     resolve: {
       alias: {

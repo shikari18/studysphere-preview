@@ -17,8 +17,6 @@ type Msg =
   | { role: "ai"; text: string; card?: { steps: string[]; tip: string } };
 
 // ─── Gemini Live API constants ────────────────────────────────────────────────
-const GEMINI_API_KEY = "AQ.Ab8RN6Lq-UQys-_ZeYVAcF6GkJAUKLaEPpjjZON73xBeQFhXdQ";
-const GEMINI_WS_URL = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${GEMINI_API_KEY}`;
 const GEMINI_MODEL = "models/gemini-3.1-flash-live-preview";
 // Output sample rate for Gemini Live
 const OUTPUT_SAMPLE_RATE = 24000;
@@ -381,8 +379,11 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
         ctx = audioCtx;
         audioCtxRef.current = ctx;
 
-        // 3. Open WebSocket
-        const socket = new WebSocket(GEMINI_WS_URL);
+        // 3. Open WebSocket via local proxy endpoint
+        const isSecure = window.location.protocol === "https:";
+        const wsProtocol = isSecure ? "wss:" : "ws:";
+        const wsUrl = `${wsProtocol}//${window.location.host}/api/ws-gemini`;
+        const socket = new WebSocket(wsUrl);
         if (isCancelled) {
           audioStream.getTracks().forEach((t) => t.stop());
           audioCtx.close().catch(() => {});
