@@ -55,7 +55,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "StudySphere AI — Your personal AI tutor" },
       { name: "description", content: "Premium mobile study app: AI tutor, smart notes, quizzes, flashcards, past papers and focus mode." },
-      { name: "theme-color", content: "#070A12" },
+      { name: "theme-color", content: "#ffffff" },
       { property: "og:title", content: "StudySphere AI" },
       { property: "og:description", content: "Study smarter with a luxury AI tutor." },
       { property: "og:type", content: "website" },

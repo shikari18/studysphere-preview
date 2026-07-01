@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
@@ -11,6 +11,18 @@ function Login() {
   const nav = useNavigate();
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
+
+  // Force white background on html/body to prevent dark bleed in safe-area insets
+  useEffect(() => {
+    const prev = document.body.style.background;
+    const prevHtml = document.documentElement.style.background;
+    document.body.style.background = "#ffffff";
+    document.documentElement.style.background = "#ffffff";
+    return () => {
+      document.body.style.background = prev;
+      document.documentElement.style.background = prevHtml;
+    };
+  }, []);
 
   return (
     <div

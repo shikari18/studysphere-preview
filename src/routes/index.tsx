@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, Mail, X } from "lucide-react";
 import hero from "@/assets/onboarding-hero.jpg";
 import logo from "@/assets/logo.png";
@@ -22,6 +22,18 @@ function Onboarding() {
   const [showAuth, setShowAuth] = useState(false);
   const nav = useNavigate();
   const last = i === slides.length - 1;
+
+  // Force white background on html/body to prevent dark bleed in safe-area insets
+  useEffect(() => {
+    const prev = document.body.style.background;
+    const prevHtml = document.documentElement.style.background;
+    document.body.style.background = "#ffffff";
+    document.documentElement.style.background = "#ffffff";
+    return () => {
+      document.body.style.background = prev;
+      document.documentElement.style.background = prevHtml;
+    };
+  }, []);
 
   const onNext = () => {
     if (!authed) {
