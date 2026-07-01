@@ -39,6 +39,40 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const urlObj = new URL(request.url);
+    if (urlObj.pathname === "/api/pdf-proxy") {
+      const targetUrl = urlObj.searchParams.get("url");
+      if (!targetUrl) {
+        return new Response("Missing url parameter", { status: 400 });
+      }
+      try {
+        const response = await fetch(targetUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.cambridgeinternational.org/"
+          }
+        });
+        const headers = new Headers();
+        headers.set("Content-Type", "application/pdf");
+        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+        headers.set("Access-Control-Allow-Headers", "*");
+        headers.set("Content-Disposition", "inline");
+        
+        const contentLength = response.headers.get("Content-Length");
+        if (contentLength) {
+          headers.set("Content-Length", contentLength);
+        }
+        
+        return new Response(response.body, {
+          status: response.status,
+          headers,
+        });
+      } catch (err: any) {
+        return new Response(`Proxy error: ${err.message}`, { status: 502 });
+      }
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

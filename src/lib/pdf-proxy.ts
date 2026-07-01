@@ -1,26 +1,19 @@
 /**
  * pdf-proxy.ts
  *
- * Exam-Glow uses a Django backend to proxy PDFs from XtremePapers and GCE Guide
- * because those servers block cross-origin iframe embedding (X-Frame-Options / CORS).
+ * Exam-Glow uses a Django backend to stream PDFs to bypass X-Frame-Options.
+ * StudySphere is pure frontend, so we use Google Docs Viewer instead:
+ *   https://docs.google.com/viewer?url=<encoded>&embedded=true
  *
- * StudySphere is pure frontend, so we:
- *  1. Fetch the PDF bytes through a public CORS proxy (allorigins.win)
- *  2. Create a local blob:// URL
- *  3. Render that blob URL in an <iframe> — bypassing all CORS/X-Frame blocks
- *
- * This mirrors exactly what Exam-Glow's PastPaperProxyView and SyllabusPdfView do.
+ * Google Docs Viewer fetches the PDF from any public URL and renders it
+ * inside an <iframe> — no CORS issues, no X-Frame-Options problems.
+ * This is the industry-standard client-side alternative to a proxy server.
  */
 
-// allorigins.win wraps any URL and returns the raw bytes with permissive CORS headers
-const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+const GOOGLE_VIEWER = "https://docs.google.com/viewer?embedded=true&url=";
 
-export async function fetchPdfAsBlob(url: string): Promise<string> {
-  const proxyUrl = CORS_PROXY + encodeURIComponent(url);
-  const res = await fetch(proxyUrl);
-  if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status}`);
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
+export function getViewerUrl(pdfUrl: string): string {
+  return `/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`;
 }
 
 /**
@@ -44,7 +37,7 @@ export function buildXtremeUrl(
 
 /**
  * Build GCE Guide syllabus PDF URL — exact same logic as Exam-Glow's SyllabusPdfView._gceguide_urls
- * Tries years from newest to oldest: 26, 25, 24, 23, 22
+ * Returns URLs for years 2026 → 2022 (newest first).
  */
 export function buildSyllabusUrls(code: string, subjectName: string): string[] {
   const folder = `${subjectName} (${code})`;
@@ -52,6 +45,14 @@ export function buildSyllabusUrls(code: string, subjectName: string): string[] {
     (yy) =>
       `https://www.gceguide.xyz/Cambridge%20IGCSE/${encodeURIComponent(folder)}/${code}_y${yy}_sy.pdf`
   );
+}
+
+/** Get the viewer URL for the most likely syllabus PDF (tries y25 first) */
+export function getSyllabusViewerUrl(code: string, subjectName: string): string {
+  const folder = `${subjectName} (${code})`;
+  // Use y25 as primary — same year Exam-Glow tries first
+  const pdfUrl = `https://www.gceguide.xyz/Cambridge%20IGCSE/${encodeURIComponent(folder)}/${code}_y25_sy.pdf`;
+  return getViewerUrl(pdfUrl);
 }
 
 /** Same subject name map as Exam-Glow's SyllabusPdfView.SUBJECT_NAMES */
@@ -104,3 +105,8 @@ export const SYLLABUS_SUBJECT_NAMES: Record<string, string> = {
   "0413": "Physical Education",
   "0648": "Food and Nutrition",
 };
+
+// Keep fetchPdfAsBlob for backwards compat but now just returns a viewer URL
+export async function fetchPdfAsBlob(url: string): Promise<string> {
+  return getViewerUrl(url);
+}

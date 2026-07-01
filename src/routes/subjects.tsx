@@ -6,6 +6,7 @@ import {
   Eye, CheckCircle2, Layers,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile/Shell";
+import { GlassCard } from "@/components/mobile/ui";
 import {
   IGCSE_SUBJECTS, IGCSE_YEARS, IGCSE_SESSIONS, CATEGORY_META,
   type IgcseSubject, type SubjectCategory,
@@ -222,15 +223,15 @@ function SubjectDetail({
     let found: string | null = null;
     for (const yy of years) {
       const url = `https://www.gceguide.xyz/Cambridge%20IGCSE/${encodeURIComponent(folder)}/${code}_y${yy}_sy.pdf`;
+      const proxyUrl = `/api/pdf-proxy?url=${encodeURIComponent(url)}`;
       try {
-        const res = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(6000) });
+        const res = await fetch(proxyUrl, { method: "HEAD", signal: AbortSignal.timeout(6000) });
         if (res.ok) { found = url; break; }
       } catch { /* try next */ }
     }
 
     if (found) {
-      // Use PDF.js viewer hosted on Mozilla CDN — works cross-origin without CORS issues
-      const viewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(found)}`;
+      const viewerUrl = `/api/pdf-proxy?url=${encodeURIComponent(found)}`;
       setSyllabusBlobUrl(viewerUrl);
       setSyllabusDirectUrl(found);
       setSyllabusLoading(false);
@@ -238,9 +239,9 @@ function SubjectDetail({
       // Fallback: try direct iframe with the y25 URL (some browsers can render it)
       const fallbackUrl = `https://www.gceguide.xyz/Cambridge%20IGCSE/${encodeURIComponent(folder)}/${code}_y25_sy.pdf`;
       setSyllabusDirectUrl(fallbackUrl);
-      setSyllabusBlobUrl(null);
+      setSyllabusBlobUrl(`/api/pdf-proxy?url=${encodeURIComponent(fallbackUrl)}`);
       setSyllabusLoading(false);
-      setSyllabusError(true);
+      setSyllabusError(false); // don't flag error immediately, let it try to render
     }
   };
 
@@ -265,8 +266,9 @@ function SubjectDetail({
 
     // Probe QP availability
     let qpOk = false;
+    const proxyQpUrl = `/api/pdf-proxy?url=${encodeURIComponent(qpUrl)}`;
     try {
-      const r = await fetch(qpUrl, { method: "HEAD", signal: AbortSignal.timeout(8000) });
+      const r = await fetch(proxyQpUrl, { method: "HEAD", signal: AbortSignal.timeout(8000) });
       qpOk = r.ok;
     } catch { qpOk = false; }
 
@@ -276,9 +278,8 @@ function SubjectDetail({
       return;
     }
 
-    // Use PDF.js viewer — works for direct public PDFs
-    const qpViewer = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(qpUrl)}`;
-    const msViewer = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(msUrl)}`;
+    const qpViewer = `/api/pdf-proxy?url=${encodeURIComponent(qpUrl)}`;
+    const msViewer = `/api/pdf-proxy?url=${encodeURIComponent(msUrl)}`;
 
     setPdfLoaded({
       qpBlob: qpViewer,
@@ -661,7 +662,6 @@ function SubjectDetail({
 }
 
 // ─── Note Block Renderer (mirrors notes.tsx NoteBlock) ────────────────────────
-import { GlassCard } from "@/components/mobile/ui";
 
 function NoteBlockRenderer({ block }: { block: any }) {
   switch (block.kind) {

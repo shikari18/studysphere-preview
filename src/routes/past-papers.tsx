@@ -133,32 +133,21 @@ export function PastPapers() {
     const qpUrl = buildXtremeUrl(subject.code, subject.folder, year, session, paperNum, variant, "qp");
     const msUrl = buildXtremeUrl(subject.code, subject.folder, year, session, paperNum, variant, "ms");
 
-    try {
-      // Fetch both in parallel via CORS proxy (same as Exam-Glow's proxy endpoint)
-      const [qpResult, msResult] = await Promise.allSettled([
-        fetchPdfAsBlob(qpUrl),
-        fetchPdfAsBlob(msUrl),
-      ]);
+    const qpViewer = `/api/pdf-proxy?url=${encodeURIComponent(qpUrl)}`;
+    const msViewer = `/api/pdf-proxy?url=${encodeURIComponent(msUrl)}`;
 
-      setPdfLoaded({
-        qpBlob: qpResult.status === "fulfilled" ? qpResult.value : null,
-        msBlob: msResult.status === "fulfilled" ? msResult.value : null,
-        qpUrl,
-        msUrl,
-        error: qpResult.status === "rejected" && msResult.status === "rejected" ? "Paper not found in archive." : null,
-      });
-      setActiveTab(qpResult.status === "fulfilled" ? "qp" : "ms");
-    } catch (e) {
-      setPdfLoaded({ qpBlob: null, msBlob: null, qpUrl, msUrl, error: "Failed to load paper." });
-    } finally {
-      setLoading(false);
-    }
+    setPdfLoaded({
+      qpBlob: qpViewer,
+      msBlob: msViewer,
+      qpUrl,
+      msUrl,
+      error: null,
+    });
+    setActiveTab("qp");
+    setLoading(false);
   };
 
   const closeViewer = () => {
-    // Revoke blob URLs to free memory
-    if (pdfLoaded?.qpBlob) URL.revokeObjectURL(pdfLoaded.qpBlob);
-    if (pdfLoaded?.msBlob) URL.revokeObjectURL(pdfLoaded.msBlob);
     setViewingPaper(null);
     setPdfLoaded(null);
   };
