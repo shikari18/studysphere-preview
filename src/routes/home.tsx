@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   Search, Mic, Upload, Sparkles as SparkIcon,
-  BookOpen, FileText, Scan,
+  BookOpen, FileText, Scan, Layers,
   Calendar, Brain, Play,
 } from "lucide-react";
 import { BotMark } from "@/components/BotMark";
