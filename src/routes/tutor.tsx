@@ -55,26 +55,31 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 // ─── Image generation via Gemini 2.0 Flash (native image output) ─────────────
 async function generateImageGemini(prompt: string): Promise<string> {
   const key = import.meta.env.VITE_GEMINI_API_KEY as string;
-  // Gemini 2.0 Flash with image generation capability
+  // gemini-2.0-flash-preview-image-generation supports TEXT+IMAGE output via generateContent
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"],
+      },
     }),
   });
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Image generation error ${res.status}: ${errText}`);
+    throw new Error(`Image generation failed (${res.status}): ${errText}`);
   }
   const data = await res.json();
-  // Find the inline image part
+  // Walk all parts looking for an inlineData image
   const parts: any[] = data.candidates?.[0]?.content?.parts ?? [];
-  const imgPart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
-  if (!imgPart) throw new Error("No image was returned. The model may not support image generation for this prompt.");
-  return `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
+  for (const part of parts) {
+    if (part.inlineData?.mimeType?.startsWith("image/") && part.inlineData?.data) {
+      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    }
+  }
+  throw new Error("No image was returned by the model. Try a more descriptive prompt.");
 }
 
 // ─── PDF text extractor (simple — reads embedded text via FileReader) ─────────
@@ -193,8 +198,6 @@ function Tutor() {
     try {
       // Image generation request
       if (t && isImageGenRequest(t)) {
-        // Show generating placeholder
-        const placeholderId = Date.now();
         setMessages((m) => [...m, { role: "ai", text: "__generating_image__", generatedImage: undefined }]);
         try {
           const imgUrl = await generateImageGemini(t);
@@ -203,10 +206,11 @@ function Tutor() {
               ? { ...msg, text: "Here's the image I generated for you:", generatedImage: imgUrl }
               : msg
           ));
-        } catch (err) {
+        } catch (err: any) {
+          const errMsg = err?.message ?? "Image generation failed. Please try again.";
           setMessages((m) => m.map((msg) =>
             msg.text === "__generating_image__"
-              ? { ...msg, text: "Sorry, I couldn't generate that image. Please try again." }
+              ? { ...msg, text: `Sorry, I couldn't generate that image. ${errMsg}` }
               : msg
           ));
         }
