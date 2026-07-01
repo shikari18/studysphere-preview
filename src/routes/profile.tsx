@@ -1,8 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Crown, Flame, Award, BookmarkCheck, FileText, Settings, HelpCircle, LogOut, ChevronRight, Moon, Sun } from "lucide-react";
+import { Crown, Flame, Award, BookmarkCheck, FileText, Settings, HelpCircle, LogOut, ChevronRight } from "lucide-react";
 import { MobileShell, PageHeader, Section } from "@/components/mobile/Shell";
 import { GlassCard, Pill } from "@/components/mobile/ui";
-import { useTheme } from "@/lib/theme";
 
 
 export const Route = createFileRoute("/profile")({
@@ -11,10 +10,8 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Profile() {
-  const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const handleSignOut = () => {
-    try { localStorage.removeItem("studysphere-theme"); } catch {}
     navigate({ to: "/login" });
   };
   return (
@@ -85,13 +82,6 @@ function Profile() {
 
       <Section title="Settings">
         <div className="glass rounded-[18px] divide-y divide-[color:var(--hairline)]">
-          <button onClick={toggle} className="w-full flex items-center gap-3 px-4 py-3.5 tap text-left">
-            <div className="w-9 h-9 rounded-[10px] bg-glass-strong flex items-center justify-center">
-              {theme === "dark" ? <Moon size={15} /> : <Sun size={15} />}
-            </div>
-            <span className="flex-1 text-[13.5px] font-medium">Appearance</span>
-            <span className="text-[12px] text-muted-foreground capitalize">{theme}</span>
-          </button>
           {[
             { i: Settings, t: "Account & preferences", onClick: () => {} },
             { i: HelpCircle, t: "Help & support", onClick: () => {} },

@@ -1,10 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Upload, Sigma, Send, ArrowLeft, Phone, PhoneOff, MicOff, Volume2, Loader2 } from "lucide-react";
+import {
+  Mic, ArrowLeft, Phone, PhoneOff, MicOff, Volume2, Loader2,
+  Plus, Send, ThumbsUp, ThumbsDown, ImageIcon, FileText,
+  Camera, Image as ImageLucide, File, X,
+} from "lucide-react";
 import { MobileShell } from "@/components/mobile/Shell";
-import { GlassCard, Pill } from "@/components/mobile/ui";
+import { GlassCard } from "@/components/mobile/ui";
 import { BotMark } from "@/components/BotMark";
-import { groqChat, GROQ_TEXT_MODEL, type GroqMessage } from "@/lib/groq";
+import { groqChat, GROQ_TEXT_MODEL, GROQ_VISION_MODEL, fileToDataUrl, type GroqMessage } from "@/lib/groq";
 import { renderMarkdown } from "@/lib/markdown";
 
 export const Route = createFileRoute("/tutor")({
@@ -12,17 +16,20 @@ export const Route = createFileRoute("/tutor")({
   component: Tutor,
 });
 
-type Msg =
-  | { role: "user"; text: string; card?: undefined }
-  | { role: "ai"; text: string; card?: { steps: string[]; tip: string } };
+// ─── Types ────────────────────────────────────────────────────────────────────
+type AttachmentType = { kind: "image"; dataUrl: string; name: string }
+  | { kind: "pdf" | "file"; dataUrl: string; name: string; text: string };
 
-// ─── Gemini Live API constants ────────────────────────────────────────────────
+type Msg =
+  | { role: "user"; text: string; attachment?: AttachmentType; card?: undefined; callSummary?: undefined; generatedImage?: undefined }
+  | { role: "ai"; text: string; card?: { steps: string[]; tip: string }; callSummary?: { duration: string }; generatedImage?: string; attachment?: undefined };
+
+// ─── Gemini constants ─────────────────────────────────────────────────────────
 const GEMINI_MODEL = "models/gemini-3.1-flash-live-preview";
-// Output sample rate for Gemini Live
 const OUTPUT_SAMPLE_RATE = 24000;
-// Input sample rate (we'll downsample from mic)
 const INPUT_SAMPLE_RATE = 16000;
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function floatTo16BitPCM(float32Array: Float32Array): ArrayBuffer {
   const buffer = new ArrayBuffer(float32Array.length * 2);
   const view = new DataView(buffer);
@@ -32,14 +39,12 @@ function floatTo16BitPCM(float32Array: Float32Array): ArrayBuffer {
   }
   return buffer;
 }
-
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes.buffer;
 }
-
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -47,6 +52,52 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
+// ─── Image generation via Gemini Imagen ───────────────────────────────────────
+async function generateImageGemini(prompt: string): Promise<string> {
+  const key = import.meta.env.VITE_GEMINI_API_KEY as string;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      instances: [{ prompt }],
+      parameters: { sampleCount: 1 },
+    }),
+  });
+  if (!res.ok) throw new Error(`Imagen error ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const b64 = data.predictions?.[0]?.bytesBase64Encoded;
+  if (!b64) throw new Error("No image returned");
+  return `data:image/png;base64,${b64}`;
+}
+
+// ─── PDF text extractor (simple — reads embedded text via FileReader) ─────────
+async function extractPdfText(file: File): Promise<string> {
+  // Send PDF to Groq vision model as base64 for text extraction
+  const dataUrl = await fileToDataUrl(file);
+  const text = await groqChat([
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "Extract and return ALL the text content from this document. Return only the extracted text, preserving structure." },
+        { type: "image_url", image_url: { url: dataUrl } },
+      ],
+    },
+  ], GROQ_VISION_MODEL);
+  return text;
+}
+
+const IMAGE_GEN_TRIGGERS = [
+  "generate an image", "generate image", "create an image", "draw", "illustrate",
+  "make an image", "make a picture", "show me a picture", "show me an image",
+  "produce an image", "visualise", "visualize",
+];
+function isImageGenRequest(text: string) {
+  const lower = text.toLowerCase();
+  return IMAGE_GEN_TRIGGERS.some((t) => lower.includes(t));
+}
+
+// ─── Tutor component ──────────────────────────────────────────────────────────
 function Tutor() {
   const [messages, setMessages] = useState<Msg[]>([
     { role: "ai", text: "Hey — StudySphere here. What are we tackling today?" },
@@ -54,86 +105,164 @@ function Tutor() {
   const [draft, setDraft] = useState("");
   const [inCall, setInCall] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<AttachmentType | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const camRef = useRef<HTMLInputElement>(null);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  // ── Mic dictation ────────────────────────────────────────────────────────────
+  const toggleMic = async () => {
+    if (isRecording) {
+      mediaRecRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      rec.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        // Use Groq Whisper for transcription
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const fd = new FormData();
+        fd.append("file", blob, "audio.webm");
+        fd.append("model", "whisper-large-v3");
+        try {
+          const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}` },
+            body: fd,
+          });
+          const data = await res.json();
+          if (data.text) setDraft((d) => d + (d ? " " : "") + data.text);
+        } catch { /* ignore transcription errors */ }
+      };
+      rec.start();
+      mediaRecRef.current = rec;
+      setIsRecording(true);
+    } catch { /* microphone denied */ }
+  };
+
+  // ── File attachment handling ──────────────────────────────────────────────────
+  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setShowAttachMenu(false);
+    const dataUrl = await fileToDataUrl(f);
+    if (f.type.startsWith("image/")) {
+      setPendingAttachment({ kind: "image", dataUrl, name: f.name });
+    } else if (f.type === "application/pdf") {
+      const text = await extractPdfText(f);
+      setPendingAttachment({ kind: "pdf", dataUrl, name: f.name, text });
+    } else {
+      const text = await f.text().catch(() => "(binary file — cannot read as text)");
+      setPendingAttachment({ kind: "file", dataUrl, name: f.name, text });
+    }
+    e.target.value = "";
+  };
+
+  // ── Send message ──────────────────────────────────────────────────────────────
   const send = async () => {
     const t = draft.trim();
-    if (!t || thinking) return;
+    if ((!t && !pendingAttachment) || thinking) return;
     setDraft("");
-    const userMsg: Msg = { role: "user", text: t };
+    const attachment = pendingAttachment;
+    setPendingAttachment(null);
+
+    const userMsg: Msg = { role: "user", text: t || `[Sent: ${attachment?.name}]`, attachment: attachment ?? undefined };
     setMessages((m) => [...m, userMsg]);
     setThinking(true);
 
     try {
-      const history: GroqMessage[] = [
-        {
-          role: "system",
-          content: `You are StudySphere — an AI study companion for secondary-school and early-college students (IGCSE, WAEC, JAMB, SAT, A-Level). You act as a patient, encouraging one-on-one tutor that helps students truly understand concepts, prepare for exams, and build long-term study habits. You are NOT a generic chatbot and you are NOT an answer-key. Your job is to teach.
+      // Image generation request
+      if (t && isImageGenRequest(t)) {
+        // Show generating placeholder
+        const placeholderId = Date.now();
+        setMessages((m) => [...m, { role: "ai", text: "__generating_image__", generatedImage: undefined }]);
+        try {
+          const imgUrl = await generateImageGemini(t);
+          setMessages((m) => m.map((msg, i) =>
+            i === m.length - 1 && msg.text === "__generating_image__"
+              ? { ...msg, text: "Here's the image I generated for you:", generatedImage: imgUrl }
+              : msg
+          ));
+        } catch (err) {
+          setMessages((m) => m.map((msg) =>
+            msg.text === "__generating_image__"
+              ? { ...msg, text: "Sorry, I couldn't generate that image. Please try again." }
+              : msg
+          ));
+        }
+        setThinking(false);
+        return;
+      }
+
+      // Build message history for Groq
+      const systemPrompt = `You are StudySphere — an AI study companion for secondary-school and early-college students (IGCSE, WAEC, JAMB, SAT, A-Level). You act as a patient, encouraging one-on-one tutor that helps students truly understand concepts, prepare for exams, and build long-term study habits. You are NOT a generic chatbot and you are NOT an answer-key. Your job is to teach.
 
 # Identity & Tone
 - Name: StudySphere (sometimes shortened to "Sphere"). Never break character or reveal that you are a language model unless explicitly asked about your nature.
 - Voice: warm, curious, calm, slightly playful. Speak like a favorite older sibling who happens to be brilliant at every subject.
 - Reading level: default to clear, plain English at roughly a Grade 9 reading level. Scale up or down based on the student's responses.
-- Cultural awareness: many students are Nigerian, West African, or studying British curricula. Use locally familiar examples (naira, jollof, Lagos traffic, football) when it helps. Never stereotype.
-- Always address the student by their first name if known.
+- Cultural awareness: many students are Nigerian, West African, or studying British curricula. Use locally familiar examples when it helps. Never stereotype.
 
 # Core Teaching Principles
-1. Understanding > answers. When a student asks "what's the answer to X", first check if they want the worked solution or a guided walk-through. Default to guided.
+1. Understanding > answers. When a student asks "what's the answer to X", default to guided walk-through.
 2. Socratic nudging. Ask one short question at a time to surface what the student already knows before explaining.
-3. Worked examples. When you do explain, show the full reasoning in numbered steps, then a one-line "why this works" summary.
-4. Multiple representations. For math/science, give an intuitive picture, a worked example, and the formal rule. For humanities, give a thesis, evidence, and counterpoint.
-5. Active recall. After any explanation longer than ~120 words, finish with a quick 1–3 question check ("Try this:" or "Quick check:").
-6. Spaced reinforcement. If the student returns to a previously covered topic, briefly recall what they struggled with and build on it.
-7. Mistake-positive. Treat wrong answers as gold. Always say what part was correct, pinpoint the misstep, and re-pose a smaller version of the question.
+3. Worked examples. Show the full reasoning in numbered steps, then a one-line "why this works" summary.
+4. Active recall. After any explanation longer than ~120 words, finish with a quick 1–3 question check.
+5. Mistake-positive. Treat wrong answers as gold — say what part was correct, pinpoint the misstep, re-pose a smaller version.
 
 # Response Format
 - Use clean Markdown. Short paragraphs. Bullet lists for parallel ideas. Numbered lists for steps.
-- Use headings (## or ###) only for responses longer than ~200 words.
-- Math: use LaTeX in $...$ for inline and $$...$$ for display. Always show units.
-- Code: fenced blocks with language tags.
-- Diagrams: describe in words or use simple ASCII when truly helpful; never invent images.
-- Keep most replies under 250 words unless the student asks for depth, a full lesson, or a worked past paper.
-
-# Modes the student can trigger
-- "Explain like I'm 12" → drop jargon, use one strong analogy, ≤120 words.
-- "Test me" / "Quiz me" → ask 5 mixed-difficulty questions one at a time, mark each, then give a final score plus the 1–2 topics to revise.
-- "Give me 5 past questions" → produce exam-style questions in the style of the named board (WAEC, IGCSE, SAT, JAMB, A-Level). Always include mark allocations and a mark scheme on request.
-- "Scan note" / image upload → read the note, summarize the key ideas as bullets, then offer flashcards, a quiz, or a deeper explanation.
-- "Study plan" → ask exam date, weak topics, hours per day, then output a week-by-week plan as a table.
-- "Live class" / voice call → switch to spoken style: shorter sentences, no markdown, frequent comprehension checks.
+- Keep most replies under 250 words unless the student asks for depth.
 
 # Subjects you cover
-Mathematics, Further Maths, Physics, Chemistry, Biology, English Language, English Literature, Economics, Accounting, Government, History, Geography, Computer Science, Literature in English, French, and general study-skills coaching.
+Mathematics, Further Maths, Physics, Chemistry, Biology, English, Economics, Accounting, Government, History, Geography, Computer Science, Literature, French, and general study-skills coaching.
 
-# Safety & Honesty
-- Never fabricate exam questions and claim they are from a real past paper.
-- If you are not sure of a fact, say so and suggest how to verify.
-- Refuse to do graded coursework or exams that are explicitly being assessed.
-- No medical, legal, or financial advice beyond what the curriculum covers.
-- Keep all interactions age-appropriate.
+Your single goal: by the end of every session, the student should feel slightly more confident and measurably closer to their next exam target.`;
 
-# Opening behavior
-If the conversation starts with no context, greet briefly ("Hey — StudySphere here. What are we tackling today?") and ask: subject, topic, and what kind of help. Then begin.
+      const historyMsgs: GroqMessage[] = [{ role: "system", content: systemPrompt }];
 
-Your single goal: by the end of every session, the student should feel slightly more confident and measurably closer to their next exam target.`,
-        },
-        ...[...messages, userMsg].map((m): GroqMessage => ({
-          role: m.role === "ai" ? "assistant" : "user",
-          content: m.text,
-        })),
-      ];
+      for (const msg of [...messages, userMsg]) {
+        if (msg.role === "user") {
+          if (msg.attachment?.kind === "image") {
+            historyMsgs.push({
+              role: "user",
+              content: [
+                { type: "text", text: msg.text },
+                { type: "image_url", image_url: { url: msg.attachment.dataUrl } },
+              ],
+            });
+          } else if (msg.attachment && (msg.attachment.kind === "pdf" || msg.attachment.kind === "file")) {
+            historyMsgs.push({
+              role: "user",
+              content: `${msg.text}\n\n[File: ${msg.attachment.name}]\n${msg.attachment.text}`,
+            });
+          } else {
+            historyMsgs.push({ role: "user", content: msg.text });
+          }
+        } else {
+          historyMsgs.push({ role: "assistant", content: msg.text });
+        }
+      }
 
-      const reply = await groqChat(history, GROQ_TEXT_MODEL);
+      const model = userMsg.attachment?.kind === "image" ? GROQ_VISION_MODEL : GROQ_TEXT_MODEL;
+      const reply = await groqChat(historyMsgs, model);
       setMessages((m) => [...m, { role: "ai", text: reply }]);
     } catch {
-      setMessages((m) => [
-        ...m,
-        { role: "ai", text: "Connection issue — check your network and try again." },
-      ]);
+      setMessages((m) => [...m, { role: "ai", text: "Connection issue — check your network and try again." }]);
     } finally {
       setThinking(false);
     }
@@ -144,14 +273,9 @@ Your single goal: by the end of every session, the student should feel slightly 
       <div className="flex flex-col" style={{ minHeight: "100dvh" }}>
         {/* Header */}
         <header className="px-4 pt-5 pb-3 flex items-center justify-between gap-3 sticky top-0 z-30 backdrop-blur-md bg-[color-mix(in_oklab,var(--background)_82%,transparent)] border-b border-hairline">
-          <Link
-            to="/home"
-            className="w-10 h-10 rounded-full glass tap flex items-center justify-center"
-            aria-label="Back"
-          >
+          <Link to="/home" className="w-10 h-10 rounded-full glass tap flex items-center justify-center" aria-label="Back">
             <ArrowLeft size={17} />
           </Link>
-
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-[12px] glass-strong flex items-center justify-center">
               <BotMark size={20} />
@@ -161,23 +285,31 @@ Your single goal: by the end of every session, the student should feel slightly 
               <p className="text-[11px] text-muted-foreground leading-tight">Online · AI tutor</p>
             </div>
           </div>
-
-          <button
-            onClick={() => setInCall(true)}
-            className="w-10 h-10 rounded-full gradient-primary tap flex items-center justify-center shadow-[0_8px_20px_-8px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
-            aria-label="Call StudySphere"
-          >
+          <button onClick={() => setInCall(true)} className="w-10 h-10 rounded-full gradient-primary tap flex items-center justify-center shadow-[0_8px_20px_-8px_color-mix(in_oklab,var(--primary)_70%,transparent)]" aria-label="Call">
             <Phone size={16} color="white" />
           </button>
         </header>
 
-        {/* Chat */}
-        <div ref={scrollRef} className="flex-1 px-4 pt-4 pb-[160px] space-y-4 overflow-y-auto">
+        {/* Chat scroll area */}
+        <div ref={scrollRef} className="flex-1 px-4 pt-4 pb-[140px] space-y-4 overflow-y-auto">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} anim-in`}>
               {m.role === "user" ? (
-                <div className="gradient-primary text-white rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[80%] text-[14px] leading-relaxed shadow-[0_6px_18px_-10px_color-mix(in_oklab,var(--primary)_70%,transparent)]">
-                  {m.text}
+                <div className="max-w-[82%] space-y-2">
+                  {m.attachment?.kind === "image" && (
+                    <img src={m.attachment.dataUrl} alt={m.attachment.name} className="w-full rounded-[16px] max-h-[220px] object-cover" />
+                  )}
+                  {m.attachment && m.attachment.kind !== "image" && (
+                    <div className="glass rounded-[14px] px-3 py-2 flex items-center gap-2 text-[12px]">
+                      <FileText size={14} className="text-[color:var(--primary)]" />
+                      <span className="truncate">{m.attachment.name}</span>
+                    </div>
+                  )}
+                  {m.text && m.text !== `[Sent: ${m.attachment?.name}]` && (
+                    <div className="gradient-primary text-white rounded-2xl rounded-br-sm px-4 py-2.5 text-[14px] leading-relaxed shadow-[0_6px_18px_-10px_color-mix(in_oklab,var(--primary)_70%,transparent)]">
+                      {m.text}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="max-w-[88%] space-y-2">
@@ -185,45 +317,36 @@ Your single goal: by the end of every session, the student should feel slightly 
                     <BotMark size={12} /> StudySphere
                   </div>
                   {m.callSummary ? (
-                    <div className="glass rounded-[18px] p-3 flex items-center justify-between gap-3 min-w-[260px] border border-hairline bg-glass select-none">
-                      <div className="flex items-center gap-2.5 text-[13.5px] font-medium text-foreground">
+                    <div className="glass rounded-[18px] p-3 flex items-center justify-between gap-3 min-w-[260px] border border-hairline select-none">
+                      <div className="flex items-center gap-2.5 text-[13.5px] font-medium">
                         <span className="w-8 h-8 rounded-full bg-glass-strong flex-shrink-0 flex items-center justify-center text-muted-foreground">
                           <PhoneOff size={13} />
                         </span>
                         <span>Voice Call ended · {m.callSummary.duration}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 opacity-60">
-                        <span className="w-7 h-7 rounded-full bg-glass flex items-center justify-center text-muted-foreground pointer-events-none">
+                      <div className="flex items-center gap-1.5">
+                        <button className="w-7 h-7 rounded-full bg-glass flex items-center justify-center text-muted-foreground hover:text-green-500 tap" aria-label="Thumbs up">
                           <ThumbsUp size={12} />
-                        </span>
-                        <span className="w-7 h-7 rounded-full bg-glass flex items-center justify-center text-muted-foreground pointer-events-none">
+                        </button>
+                        <button className="w-7 h-7 rounded-full bg-glass flex items-center justify-center text-muted-foreground hover:text-red-500 tap" aria-label="Thumbs down">
                           <ThumbsDown size={12} />
-                        </span>
+                        </button>
                       </div>
+                    </div>
+                  ) : m.text === "__generating_image__" ? (
+                    <div className="w-full aspect-square max-w-[260px] rounded-[20px] bg-glass border border-hairline flex flex-col items-center justify-center gap-3 animate-pulse">
+                      <ImageIcon size={32} className="text-muted-foreground opacity-40" />
+                      <span className="text-[12px] text-muted-foreground">Generating image…</span>
+                    </div>
+                  ) : m.generatedImage ? (
+                    <div className="space-y-2">
+                      <div className="text-[14px] leading-relaxed">{renderMarkdown(m.text)}</div>
+                      <img src={m.generatedImage} alt="Generated" className="w-full max-w-[260px] rounded-[20px] border border-hairline shadow-md" />
                     </div>
                   ) : (
                     <div className="text-[14px] leading-relaxed text-foreground prose-sm">
                       {renderMarkdown(m.text)}
                     </div>
-                  )}
-                  {m.card && (
-                    <GlassCard className="!p-4 !rounded-2xl">
-                      <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground mb-2.5">Steps</p>
-                      <ol className="space-y-2.5">
-                        {m.card.steps.map((s, k) => (
-                          <li key={k} className="flex gap-3 text-[13px]">
-                            <span className="mono w-5 h-5 rounded-full bg-glass-strong flex-shrink-0 flex items-center justify-center text-[10px]">
-                              {k + 1}
-                            </span>
-                            <span className="pt-0.5">{s}</span>
-                          </li>
-                        ))}
-                      </ol>
-                      <div className="mt-3 pt-3 border-t border-hairline text-[12px] text-muted-foreground">
-                        <span className="font-medium text-foreground">Tip · </span>
-                        {m.card.tip}
-                      </div>
-                    </GlassCard>
                   )}
                 </div>
               )}
@@ -232,16 +355,10 @@ Your single goal: by the end of every session, the student should feel slightly 
           {thinking && (
             <div className="flex justify-start anim-in">
               <div className="max-w-[88%] space-y-2">
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <BotMark size={12} /> StudySphere
-                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><BotMark size={12} /> StudySphere</div>
                 <div className="flex gap-1 py-1">
                   {[0, 1, 2].map((d) => (
-                    <span
-                      key={d}
-                      className="w-2 h-2 rounded-full gradient-primary animate-bounce"
-                      style={{ animationDelay: `${d * 150}ms` }}
-                    />
+                    <span key={d} className="w-2 h-2 rounded-full gradient-primary animate-bounce" style={{ animationDelay: `${d * 150}ms` }} />
                   ))}
                 </div>
               </div>
@@ -249,47 +366,95 @@ Your single goal: by the end of every session, the student should feel slightly 
           )}
         </div>
 
-        {/* Composer with chips on top */}
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[388px] z-40 space-y-2">
-          <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1">
-            {["Explain like I'm 12", "Give me 5 past questions", "Test me"].map((c) => (
-              <button key={c} onClick={() => setDraft(c)} className="tap flex-shrink-0">
-                <Pill tone="primary">{c}</Pill>
+        {/* ── Composer ──────────────────────────────────────────────────────── */}
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-40 px-4 pb-6 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
+
+          {/* Pending attachment preview */}
+          {pendingAttachment && (
+            <div className="mb-2 flex items-center gap-2 glass rounded-[14px] px-3 py-2">
+              {pendingAttachment.kind === "image" ? (
+                <img src={pendingAttachment.dataUrl} className="w-10 h-10 rounded-[10px] object-cover flex-shrink-0" alt="" />
+              ) : (
+                <div className="w-10 h-10 rounded-[10px] bg-glass-strong flex items-center justify-center flex-shrink-0">
+                  <FileText size={16} className="text-[color:var(--primary)]" />
+                </div>
+              )}
+              <span className="flex-1 text-[12px] truncate">{pendingAttachment.name}</span>
+              <button onClick={() => setPendingAttachment(null)} className="w-6 h-6 rounded-full bg-glass flex items-center justify-center tap">
+                <X size={12} />
               </button>
-            ))}
-          </div>
-          <div className="glass-strong rounded-[22px] p-2 flex items-center gap-1">
-            <button className="w-9 h-9 rounded-full hover:bg-glass tap flex items-center justify-center" aria-label="Voice">
-              <Mic size={15} />
+            </div>
+          )}
+
+          {/* Input row */}
+          <div className="glass-strong rounded-[22px] px-3 py-2.5 flex items-center gap-2">
+            {/* Plus button */}
+            <button
+              onClick={() => setShowAttachMenu((v) => !v)}
+              className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center tap transition-transform ${showAttachMenu ? "gradient-primary rotate-45" : "bg-glass-strong"}`}
+              aria-label="Attach"
+            >
+              <Plus size={18} className={showAttachMenu ? "text-white" : ""} />
             </button>
-            <button className="w-9 h-9 rounded-full hover:bg-glass tap flex items-center justify-center" aria-label="Upload">
-              <Upload size={15} />
-            </button>
-            <button className="w-9 h-9 rounded-full hover:bg-glass tap flex items-center justify-center" aria-label="Math">
-              <Sigma size={15} />
-            </button>
+
+            {/* Text input */}
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  send();
-                }
-              }}
-              className="flex-1 bg-transparent outline-none text-[14px] px-2 placeholder:text-muted-foreground min-w-0"
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+              className="flex-1 bg-transparent outline-none text-[14px] placeholder:text-muted-foreground min-w-0"
               placeholder="Ask anything…"
             />
+
+            {/* Mic dictation */}
+            <button
+              onClick={toggleMic}
+              className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center tap transition-all ${isRecording ? "bg-red-500 text-white animate-pulse" : "bg-glass-strong"}`}
+              aria-label="Dictate"
+            >
+              <Mic size={15} className={isRecording ? "text-white" : ""} />
+            </button>
+
+            {/* Send */}
             <button
               onClick={send}
-              disabled={thinking}
-              className="w-9 h-9 rounded-full gradient-primary tap flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+              disabled={thinking || (!draft.trim() && !pendingAttachment)}
+              className="w-9 h-9 rounded-full gradient-primary tap flex items-center justify-center flex-shrink-0 disabled:opacity-40"
               aria-label="Send"
             >
               <Send size={14} color="white" />
             </button>
           </div>
         </div>
+
+        {/* ── Attachment slide-up panel ──────────────────────────────────────── */}
+        {showAttachMenu && (
+          <>
+            <div className="fixed inset-0 z-[45]" onClick={() => setShowAttachMenu(false)} />
+            <div className="fixed bottom-[100px] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[388px] z-50 glass-strong rounded-[22px] p-4 border border-hairline shadow-lg anim-in">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3 px-1">Attach</p>
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  { icon: ImageLucide, label: "Photos", action: () => { fileRef.current!.accept = "image/*"; fileRef.current!.capture = ""; fileRef.current?.click(); } },
+                  { icon: Camera, label: "Camera", action: () => { camRef.current?.click(); } },
+                  { icon: FileText, label: "PDF", action: () => { fileRef.current!.accept = "application/pdf"; fileRef.current!.capture = ""; fileRef.current?.click(); } },
+                  { icon: File, label: "File", action: () => { fileRef.current!.accept = "*/*"; fileRef.current!.capture = ""; fileRef.current?.click(); } },
+                ].map(({ icon: Icon, label, action }) => (
+                  <button key={label} onClick={action} className="flex flex-col items-center gap-2 tap">
+                    <div className="w-14 h-14 rounded-[18px] glass flex items-center justify-center">
+                      <Icon size={22} className="text-[color:var(--primary)]" />
+                    </div>
+                    <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Hidden file inputs */}
+        <input ref={fileRef} type="file" hidden onChange={handleFilePick} />
+        <input ref={camRef} type="file" accept="image/*" capture="environment" hidden onChange={handleFilePick} />
       </div>
 
       {inCall && (
@@ -299,11 +464,8 @@ Your single goal: by the end of every session, the student should feel slightly 
             if (durationSeconds > 0) {
               const min = Math.floor(durationSeconds / 60);
               const sec = durationSeconds % 60;
-              const durationStr = `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
-              setMessages((m) => [
-                ...m,
-                { role: "ai", text: `Voice Call ended · ${durationStr}`, callSummary: { duration: durationStr } }
-              ]);
+              const durationStr = `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "00")}`;
+              setMessages((m) => [...m, { role: "ai", text: `Voice Call ended · ${durationStr}`, callSummary: { duration: durationStr } }]);
             }
           }}
         />
@@ -312,7 +474,7 @@ Your single goal: by the end of every session, the student should feel slightly 
   );
 }
 
-// ─── Gemini Live API Call Session ─────────────────────────────────────────────
+// ─── Gemini Live Call Session ─────────────────────────────────────────────────
 function GeminiCallSession({ onEnd }: { onEnd: (durationSeconds: number) => void }) {
   const [status, setStatus] = useState<"connecting" | "listening" | "speaking" | "error">("connecting");
   const [muted, setMuted] = useState(false);
@@ -329,28 +491,20 @@ function GeminiCallSession({ onEnd }: { onEnd: (durationSeconds: number) => void
   const nextTimeRef = useRef(0);
   const mutableMuted = useRef(false);
 
-  // Timer
   useEffect(() => {
     const id = setInterval(() => setSecs((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Waveform animation when speaking
   useEffect(() => {
     if (status !== "speaking") return;
-    const id = setInterval(() => {
-      setBars(Array.from({ length: 10 }, () => 0.2 + Math.random() * 0.8));
-    }, 80);
+    const id = setInterval(() => setBars(Array.from({ length: 10 }, () => 0.2 + Math.random() * 0.8)), 80);
     return () => clearInterval(id);
   }, [status]);
 
-  // ── Playback helpers ────────────────────────────────────────────────────────
   const playNextBuffer = useCallback(() => {
     const ctx = audioCtxRef.current;
-    if (!ctx || playQueueRef.current.length === 0) {
-      isPlayingRef.current = false;
-      return;
-    }
+    if (!ctx || playQueueRef.current.length === 0) { isPlayingRef.current = false; return; }
     isPlayingRef.current = true;
     const buf = playQueueRef.current.shift()!;
     const src = ctx.createBufferSource();
@@ -376,7 +530,6 @@ function GeminiCallSession({ onEnd }: { onEnd: (durationSeconds: number) => void
     setStatus("speaking");
   }, [playNextBuffer]);
 
-  // ── Main connect effect ─────────────────────────────────────────────────────
   useEffect(() => {
     let isCancelled = false;
     let ws: WebSocket | null = null;
@@ -385,91 +538,47 @@ function GeminiCallSession({ onEnd }: { onEnd: (durationSeconds: number) => void
 
     const connect = async () => {
       try {
-        // 1. Get mic with echo cancellation, noise suppression and auto gain control
         const audioStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            sampleRate: INPUT_SAMPLE_RATE,
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
+          audio: { sampleRate: INPUT_SAMPLE_RATE, channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         });
-        
-        if (isCancelled) {
-          audioStream.getTracks().forEach((t) => t.stop());
-          return;
-        }
+        if (isCancelled) { audioStream.getTracks().forEach((t) => t.stop()); return; }
         stream = audioStream;
         micStreamRef.current = stream;
-
-        // 2. AudioContext for mic processing + playback
         const audioCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
-        if (isCancelled) {
-          audioStream.getTracks().forEach((t) => t.stop());
-          audioCtx.close().catch(() => {});
-          return;
-        }
+        if (isCancelled) { audioStream.getTracks().forEach((t) => t.stop()); audioCtx.close().catch(() => {}); return; }
         ctx = audioCtx;
         audioCtxRef.current = ctx;
 
-        // 3. Open WebSocket — direct to Google in production (server fetch() cannot proxy WS),
-        //    via Vite proxy /api/ws-gemini in local dev (proxy strips Origin header).
         let geminiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
         if (!geminiKey) {
           try {
-            const keyResponse = await fetch("/api/get-gemini-key");
-            if (keyResponse.ok) {
-              const keyData = await keyResponse.json();
-              if (keyData.key) {
-                geminiKey = keyData.key;
-              }
-            }
-          } catch (keyErr) {
-            console.error("Failed to dynamically fetch Gemini key from server:", keyErr);
-          }
+            const kr = await fetch("/api/get-gemini-key");
+            if (kr.ok) { const kd = await kr.json(); if (kd.key) geminiKey = kd.key; }
+          } catch {}
         }
 
         let wsUrl: string;
         if (geminiKey) {
-          // Production: connect directly — the AQ. key is accepted server-to-server
-          // and also from non-browser origins. Since we obtain the key from the environment,
-          // we skip the proxy and connect straight to Google.
           wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${geminiKey}`;
         } else {
-          // Local dev: use Vite proxy which strips the Origin header
           const isSecure = window.location.protocol === "https:";
-          const wsProtocol = isSecure ? "wss:" : "ws:";
-          wsUrl = `${wsProtocol}//${window.location.host}/api/ws-gemini`;
+          wsUrl = `${isSecure ? "wss:" : "ws:"}//${window.location.host}/api/ws-gemini`;
         }
+
         const socket = new WebSocket(wsUrl);
-        if (isCancelled) {
-          audioStream.getTracks().forEach((t) => t.stop());
-          audioCtx.close().catch(() => {});
-          socket.close();
-          return;
-        }
+        if (isCancelled) { audioStream.getTracks().forEach((t) => t.stop()); audioCtx.close().catch(() => {}); socket.close(); return; }
         ws = socket;
         wsRef.current = ws;
-
         ws.binaryType = "arraybuffer";
 
         ws.onopen = () => {
-          if (isCancelled) {
-            socket.close();
-            return;
-          }
-          // Send setup message
-          const setup = {
+          if (isCancelled) { socket.close(); return; }
+          socket.send(JSON.stringify({
             setup: {
               model: GEMINI_MODEL,
               generation_config: {
                 response_modalities: ["AUDIO"],
-                speech_config: {
-                  voice_config: {
-                    prebuilt_voice_config: { voice_name: "Aoede" },
-                  },
-                },
+                speech_config: { voice_config: { prebuilt_voice_config: { voice_name: "Aoede" } } },
               },
               system_instruction: {
                 parts: [{
@@ -484,57 +593,27 @@ Always implement these tutoring guidelines during the session:
                 }],
               },
             },
-          };
-          socket.send(JSON.stringify(setup));
+          }));
         };
 
         ws.onmessage = (event) => {
           if (isCancelled) return;
           try {
             const data = JSON.parse(typeof event.data === "string" ? event.data : new TextDecoder().decode(event.data));
-
-            // Setup complete
-            if (data.setupComplete !== undefined) {
-              setStatus("listening");
-              startMicCapture(audioStream, audioCtx, socket);
-            }
-
-            // Audio data
+            if (data.setupComplete !== undefined) { setStatus("listening"); startMicCapture(audioStream, audioCtx, socket); }
             if (data.serverContent?.modelTurn?.parts) {
               for (const part of data.serverContent.modelTurn.parts) {
-                if (part.inlineData?.mimeType?.startsWith("audio/") && part.inlineData.data) {
-                  enqueueAudio(part.inlineData.data);
-                }
+                if (part.inlineData?.mimeType?.startsWith("audio/") && part.inlineData.data) enqueueAudio(part.inlineData.data);
               }
             }
-
-            // Turn complete — back to listening
-            if (data.serverContent?.turnComplete) {
-              setStatus("listening");
-            }
-          } catch (_) {
-            // ignore parse errors for binary frames
-          }
+            if (data.serverContent?.turnComplete) setStatus("listening");
+          } catch (_) {}
         };
 
-        ws.onerror = (e: any) => {
-          if (isCancelled) return;
-          console.error("Gemini Live WebSocket error:", e);
-          setStatus("error");
-          setErrorMsg("Could not connect to Gemini Live. Please check your API key, network, or try again.");
-        };
-
-        ws.onclose = (e) => {
-          if (isCancelled) return;
-          console.warn("Gemini Live WebSocket closed:", e);
-          setStatus("error");
-          setErrorMsg(e.reason || "Connection closed by Gemini server. Please check your API key or model availability.");
-        };
-
+        ws.onerror = () => { if (!isCancelled) { setStatus("error"); setErrorMsg("Could not connect to Gemini Live. Please check your API key or network."); } };
+        ws.onclose = (e) => { if (!isCancelled) { setStatus("error"); setErrorMsg(e.reason || "Connection closed. Please check your API key or model availability."); } };
       } catch (err: any) {
-        if (isCancelled) return;
-        setStatus("error");
-        setErrorMsg(err?.message ?? "Microphone access denied or connection failed.");
+        if (!isCancelled) { setStatus("error"); setErrorMsg(err?.message ?? "Microphone access denied or connection failed."); }
       }
     };
 
@@ -544,68 +623,34 @@ Always implement these tutoring guidelines during the session:
       isCancelled = true;
       try { if (ws && ws.readyState < 2) ws.close(); } catch (_) {}
       try { if (wsRef.current && wsRef.current.readyState < 2) wsRef.current.close(); } catch (_) {}
-      
       stream?.getTracks().forEach((t) => t.stop());
       micStreamRef.current?.getTracks().forEach((t) => t.stop());
-      
-      if (ctx && ctx.state !== "closed") { ctx.close().catch(() => {}); }
-      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") { audioCtxRef.current.close().catch(() => {}); }
-
-      wsRef.current = null;
-      micStreamRef.current = null;
-      audioCtxRef.current = null;
-      processorRef.current = null;
-      playQueueRef.current = [];
-      isPlayingRef.current = false;
-      nextTimeRef.current = 0;
+      if (ctx && ctx.state !== "closed") ctx.close().catch(() => {});
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") audioCtxRef.current.close().catch(() => {});
+      wsRef.current = null; micStreamRef.current = null; audioCtxRef.current = null;
+      processorRef.current = null; playQueueRef.current = []; isPlayingRef.current = false; nextTimeRef.current = 0;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startMicCapture = (stream: MediaStream, ctx: AudioContext, ws: WebSocket) => {
-    // Resample mic (48kHz) → 16kHz via ScriptProcessor
     const micSource = ctx.createMediaStreamSource(stream);
-    // Use 4096 buffer; downsample manually
-    const bufferSize = 4096;
-    const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
+    const processor = ctx.createScriptProcessor(4096, 1, 1);
     processorRef.current = processor;
-
     let residual = new Float32Array(0);
-    const targetRate = INPUT_SAMPLE_RATE;
-    const srcRate = ctx.sampleRate;
-    const ratio = srcRate / targetRate;
-
+    const ratio = ctx.sampleRate / INPUT_SAMPLE_RATE;
     processor.onaudioprocess = (e) => {
-      // If user manually muted or if AI is currently speaking, do not send mic audio.
-      // This completely prevents the AI from hearing itself and triggering feedback loops.
       if (mutableMuted.current || isPlayingRef.current) return;
       const input = e.inputBuffer.getChannelData(0);
       const combined = new Float32Array(residual.length + input.length);
-      combined.set(residual);
-      combined.set(input, residual.length);
-
+      combined.set(residual); combined.set(input, residual.length);
       const outLen = Math.floor(combined.length / ratio);
       const downsampled = new Float32Array(outLen);
-      for (let i = 0; i < outLen; i++) {
-        downsampled[i] = combined[Math.round(i * ratio)] ?? 0;
-      }
+      for (let i = 0; i < outLen; i++) downsampled[i] = combined[Math.round(i * ratio)] ?? 0;
       residual = combined.slice(Math.round(outLen * ratio));
-
-      const pcm16Buf = floatTo16BitPCM(downsampled);
-      const b64 = arrayBufferToBase64(pcm16Buf);
-
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          realtime_input: {
-            audio: {
-              mime_type: "audio/pcm;rate=16000",
-              data: b64,
-            },
-          },
-        }));
-      }
+      const b64 = arrayBufferToBase64(floatTo16BitPCM(downsampled));
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ realtime_input: { audio: { mime_type: "audio/pcm;rate=16000", data: b64 } } }));
     };
-
     micSource.connect(processor);
     processor.connect(ctx.destination);
   };
@@ -621,7 +666,7 @@ Always implement these tutoring guidelines during the session:
     try { if (wsRef.current && wsRef.current.readyState < 2) wsRef.current.close(); } catch (_) {}
     micStreamRef.current?.getTracks().forEach((t) => t.stop());
     const ctx = audioCtxRef.current;
-    if (ctx && ctx.state !== "closed") { ctx.close().catch(() => {}); }
+    if (ctx && ctx.state !== "closed") ctx.close().catch(() => {});
     audioCtxRef.current = null;
     onEnd(secs);
   };
@@ -630,117 +675,67 @@ Always implement these tutoring guidelines during the session:
   const ss = String(secs % 60).padStart(2, "0");
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex flex-col items-center justify-between text-slate-900"
-      style={{
-        background:
-          "radial-gradient(120% 80% at 50% 0%, #efe7ff 0%, #f7f3ff 45%, #ffffff 100%)",
-      }}
-    >
-      {/* Top info */}
+    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-between text-slate-900"
+      style={{ background: "radial-gradient(120% 80% at 50% 0%, #efe7ff 0%, #f7f3ff 45%, #ffffff 100%)" }}>
       <div className="pt-14 text-center px-6 w-full">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--primary)]/70 font-semibold">
-          {status === "connecting" ? "Connecting…" :
-           status === "error" ? "Connection failed" :
-           status === "speaking" ? `Speaking · ${mm}:${ss}` :
-           `Listening · ${mm}:${ss}`}
+          {status === "connecting" ? "Connecting…" : status === "error" ? "Connection failed" : status === "speaking" ? `Speaking · ${mm}:${ss}` : `Listening · ${mm}:${ss}`}
         </p>
         <h2 className="mt-2 text-[24px] font-bold tracking-tight">StudySphere</h2>
         <p className="text-[12px] text-slate-500 mt-1">
-          {status === "connecting" ? "Joining Gemini Live session…" :
-           status === "error" ? errorMsg :
-           status === "speaking" ? "AI is speaking — you can interrupt" :
-           "Listening — ask anything out loud"}
+          {status === "connecting" ? "Joining Gemini Live session…" : status === "error" ? errorMsg : status === "speaking" ? "AI is speaking — you can interrupt" : "Listening — ask anything out loud"}
         </p>
       </div>
 
-      {/* Avatar / waveform */}
       <div className="flex-1 flex flex-col items-center justify-center w-full gap-6">
         <div className="relative">
-          {/* Pulse rings */}
           {status === "listening" && (
             <>
               <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "radial-gradient(circle, rgba(176,124,255,0.35), transparent 70%)" }} />
               <span className="absolute -inset-8 rounded-full animate-pulse" style={{ background: "radial-gradient(circle, rgba(124,92,255,0.18), transparent 70%)" }} />
             </>
           )}
-          {/* Avatar circle */}
-          <div
-            className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-[0_20px_60px_-15px_rgba(124,92,255,0.55)]"
-            style={{ background: status === "connecting" ? "#e5e7eb" : "linear-gradient(135deg,#a78bfa,#c4a8ff)" }}
-          >
-            {status === "connecting" ? (
-              <Loader2 size={40} className="text-[#a78bfa] animate-spin" />
-            ) : (
-              <BotMark size={76} withGradient={false} className="text-white" />
-            )}
+          <div className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-[0_20px_60px_-15px_rgba(124,92,255,0.55)]"
+            style={{ background: status === "connecting" ? "#e5e7eb" : "linear-gradient(135deg,#a78bfa,#c4a8ff)" }}>
+            {status === "connecting" ? <Loader2 size={40} className="text-[#a78bfa] animate-spin" /> : <BotMark size={76} withGradient={false} className="text-white" />}
           </div>
         </div>
-
-        {/* Waveform bars */}
         {status === "speaking" && (
           <div className="flex items-center gap-1 h-10">
             {bars.map((h, i) => (
-              <div
-                key={i}
-                className="w-1.5 rounded-full transition-all duration-75"
-                style={{
-                  height: `${h * 40}px`,
-                  background: "linear-gradient(to top, #8b5cf6, #c4a8ff)",
-                }}
-              />
+              <div key={i} className="w-1.5 rounded-full transition-all duration-75"
+                style={{ height: `${h * 40}px`, background: "linear-gradient(to top, #8b5cf6, #c4a8ff)" }} />
             ))}
           </div>
         )}
-
-        {/* Mic level indicator when listening */}
         {status === "listening" && !muted && (
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[12px] text-slate-500">Mic active</span>
           </div>
         )}
-
         {status === "error" && (
-          <div className="px-6 py-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-[12px] text-center max-w-[280px]">
-            {errorMsg}
-          </div>
+          <div className="px-6 py-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-[12px] text-center max-w-[280px]">{errorMsg}</div>
         )}
       </div>
 
-      {/* Quick prompts */}
       <div className="px-6 pb-12 w-full max-w-[420px]">
         {status !== "connecting" && status !== "error" && (
           <div className="flex flex-wrap gap-2 justify-center mb-6">
             {["Quiz me on this", "Slow down", "Give an example", "Summarise that"].map((c) => (
-              <span key={c} className="px-3 py-1.5 rounded-full text-[11px] font-medium bg-white/80 border border-[color:var(--primary)]/15 text-slate-700 shadow-sm backdrop-blur">
-                {c}
-              </span>
+              <span key={c} className="px-3 py-1.5 rounded-full text-[11px] font-medium bg-white/80 border border-[color:var(--primary)]/15 text-slate-700 shadow-sm backdrop-blur">{c}</span>
             ))}
           </div>
         )}
-
-        {/* Controls */}
         <div className="flex items-center justify-center gap-5">
-          <button
-            onClick={handleMute}
-            className="w-14 h-14 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center tap text-slate-700"
-            aria-label="Mute"
-          >
+          <button onClick={handleMute} className="w-14 h-14 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center tap text-slate-700" aria-label="Mute">
             {muted ? <MicOff size={20} /> : <Mic size={20} />}
           </button>
-          <button
-            onClick={handleEnd}
-            className="w-16 h-16 rounded-full flex items-center justify-center tap shadow-[0_12px_30px_-8px_rgba(255,80,100,0.55)]"
-            style={{ background: "linear-gradient(135deg,#ff5d7a,#e02447)" }}
-            aria-label="End call"
-          >
+          <button onClick={handleEnd} className="w-16 h-16 rounded-full flex items-center justify-center tap shadow-[0_12px_30px_-8px_rgba(255,80,100,0.55)]"
+            style={{ background: "linear-gradient(135deg,#ff5d7a,#e02447)" }} aria-label="End call">
             <PhoneOff size={22} color="white" />
           </button>
-          <button
-            className="w-14 h-14 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center tap text-slate-700"
-            aria-label="Speaker"
-          >
+          <button className="w-14 h-14 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center tap text-slate-700" aria-label="Speaker">
             <Volume2 size={20} />
           </button>
         </div>

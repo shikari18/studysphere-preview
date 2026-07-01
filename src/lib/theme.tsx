@@ -1,25 +1,18 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 
-type Theme = "dark" | "light";
-const ThemeCtx = createContext<{ theme: Theme; toggle: () => void }>({ theme: "dark", toggle: () => {} });
+// White-only theme — dark mode removed
+const ThemeCtx = createContext<{ theme: "light"; toggle: () => void }>({ theme: "light", toggle: () => {} });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
-
-  useEffect(() => {
-    const stored = (typeof localStorage !== "undefined" && localStorage.getItem("studysphere-theme")) as Theme | null;
-    if (stored === "dark" || stored === "light") setTheme(stored);
-  }, []);
-
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("dark", "light");
-    root.classList.add(theme);
-    try { localStorage.setItem("studysphere-theme", theme); } catch {}
-  }, [theme]);
+    root.classList.remove("dark");
+    root.classList.add("light");
+    try { localStorage.setItem("studysphere-theme", "light"); } catch {}
+  }, []);
 
   return (
-    <ThemeCtx.Provider value={{ theme, toggle: () => setTheme((t) => (t === "dark" ? "light" : "dark")) }}>
+    <ThemeCtx.Provider value={{ theme: "light", toggle: () => {} }}>
       {children}
     </ThemeCtx.Provider>
   );

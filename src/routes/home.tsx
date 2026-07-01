@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Search, Mic, Upload, Sparkles as SparkIcon,
   BookOpen, FileText, Scan, Layers,
-  Calendar, Brain, Play,
+  Calendar, Brain, Play, BookmarkCheck,
 } from "lucide-react";
 import { BotMark } from "@/components/BotMark";
 import { MobileShell, Section } from "@/components/mobile/Shell";
@@ -220,6 +220,14 @@ function Home() {
                 <Calendar size={16} color="white" />
               </div>
               <p className="text-[12px] font-semibold">Planner</p>
+            </GlassCard>
+          </Link>
+          <Link to="/saved-notes">
+            <GlassCard className="!p-4 flex flex-col items-center gap-2 tap text-center">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#fd79a8,#e84393)" }}>
+                <BookmarkCheck size={16} color="white" />
+              </div>
+              <p className="text-[12px] font-semibold">Saved Notes</p>
             </GlassCard>
           </Link>
         </div>

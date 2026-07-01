@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { Camera, Upload, FileText, Sparkles, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Camera, Upload, FileText, Sparkles, ArrowLeft, CheckCircle2, BookmarkCheck, Loader2 } from "lucide-react";
 import { MobileShell } from "@/components/mobile/Shell";
 import { GlassCard, Pill, PrimaryButton } from "@/components/mobile/ui";
 import { BotMark } from "@/components/BotMark";
-import { groqChat, fileToDataUrl, GROQ_VISION_MODEL } from "@/lib/groq";
+import { groqChat, fileToDataUrl, GROQ_VISION_MODEL, GROQ_TEXT_MODEL } from "@/lib/groq";
+import { saveNote } from "@/routes/saved-notes";
 
 export const Route = createFileRoute("/scan")({
   head: () => ({ meta: [{ title: "Scan Note — StudySphere AI" }] }),
@@ -13,7 +14,8 @@ export const Route = createFileRoute("/scan")({
 
 interface ScanResult {
   title: string;
-  bullets: string[];
+  fullNote: string;
+  summary: string;
 }
 
 function Scan() {
@@ -21,6 +23,9 @@ function Scan() {
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">("idle");
   const [result, setResult] = useState<ScanResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [showSummary, setShowSummary] = useState(false);
+  const [summarising, setSummarising] = useState(false);
+  const [saved, setSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
 
@@ -32,6 +37,8 @@ function Scan() {
     setStatus("scanning");
     setResult(null);
     setErrorMsg("");
+    setSaved(false);
+    setShowSummary(false);
 
     try {
       const text = await groqChat(
@@ -41,7 +48,14 @@ function Scan() {
             content: [
               {
                 type: "text",
-                text: 'You are an expert note-taking assistant. Read this image of handwritten or printed study notes. Return a JSON object with exactly two fields: "title" (a short descriptive heading) and "bullets" (an array of 3–6 concise key-point strings). Respond with raw JSON only — no markdown, no explanation.',
+                text: `You are an expert note-taking and study assistant. Read this image of handwritten or printed study notes carefully.
+
+Return a JSON object with exactly three fields:
+1. "title" — a short descriptive heading (e.g. "Photosynthesis — IGCSE Biology")
+2. "fullNote" — a comprehensive, well-structured, long-form note expanding everything in the image into detailed paragraphs, headings, subheadings, bullet points, examples, definitions, and explanations. Make it thorough and educational. Use plain text only (no markdown symbols).
+3. "summary" — a concise 3–5 sentence summary of the key points.
+
+Respond with raw JSON only — no markdown, no explanation.`,
               },
               { type: "image_url", image_url: { url: dataUrl } },
             ],
@@ -58,6 +72,20 @@ function Scan() {
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
       setStatus("error");
     }
+  };
+
+  const handleSummarise = async () => {
+    if (!result) return;
+    setSummarising(true);
+    setShowSummary(true);
+    // Summary is already generated from the scan, just show it
+    setTimeout(() => setSummarising(false), 400);
+  };
+
+  const handleSave = () => {
+    if (!result || saved) return;
+    saveNote({ title: result.title, content: result.fullNote });
+    setSaved(true);
   };
 
   return (
@@ -78,7 +106,7 @@ function Scan() {
             </div>
             <p className="mt-4 text-[15px] font-semibold">Snap a page</p>
             <p className="text-[12px] text-muted-foreground mt-1">
-              StudySphere extracts text, structures it, and generates a clean note.
+              StudySphere reads your note and turns it into a full, detailed study note.
             </p>
             <div className="grid grid-cols-2 gap-2 mt-5">
               <button onClick={() => camRef.current?.click()} className="tap gradient-primary text-white rounded-[14px] py-3 text-[13px] font-medium flex items-center justify-center gap-1.5">
@@ -95,7 +123,7 @@ function Scan() {
           <GlassCard className="!p-4">
             <p className="text-[12px] font-semibold mb-2">What StudySphere does</p>
             <ul className="space-y-2 text-[12.5px] text-muted-foreground">
-              {["Reads handwriting & printed text", "Cleans & structures into sections", "Suggests flashcards & a quiz"].map((t) => (
+              {["Reads handwriting & printed text", "Expands into a full detailed note", "Summarises key points on demand"].map((t) => (
                 <li key={t} className="flex items-start gap-2">
                   <CheckCircle2 size={13} className="text-[color:var(--primary)] mt-0.5" /> {t}
                 </li>
@@ -106,7 +134,7 @@ function Scan() {
       )}
 
       {image && (
-        <div className="px-5 mt-2 space-y-3">
+        <div className="px-5 mt-2 space-y-3 pb-8">
           <GlassCard className="!p-2">
             <img src={image} alt="scanned" className="w-full rounded-[14px]" />
           </GlassCard>
@@ -118,7 +146,7 @@ function Scan() {
               </div>
               <div className="flex-1">
                 <p className="text-[13px] font-medium">Reading your note…</p>
-                <p className="text-[11px] text-muted-foreground">OCR · structuring · summarising</p>
+                <p className="text-[11px] text-muted-foreground">OCR · expanding · structuring</p>
               </div>
             </GlassCard>
           )}
@@ -138,28 +166,69 @@ function Scan() {
 
           {status === "done" && result && (
             <>
+              {/* Full Note */}
               <GlassCard className="!p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <FileText size={14} className="text-[color:var(--primary)]" />
-                  <p className="text-[13px] font-semibold">Generated note</p>
-                  <Pill tone="primary">AI</Pill>
+                  <p className="text-[13px] font-semibold flex-1">{result.title}</p>
+                  <Pill tone="primary">AI Note</Pill>
                 </div>
-                <p className="text-[13.5px] font-medium">{result.title}</p>
-                <ul className="mt-2 space-y-1.5 text-[12.5px] text-muted-foreground list-disc pl-4">
-                  {result.bullets.map((b, i) => <li key={i}>{b}</li>)}
-                </ul>
+                <div className="text-[13px] leading-relaxed text-foreground whitespace-pre-wrap">
+                  {result.fullNote}
+                </div>
               </GlassCard>
 
+              {/* Summary panel */}
+              {showSummary && (
+                <GlassCard className="!p-4 border border-[color:var(--primary)]/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles size={13} className="text-[color:var(--primary)]" />
+                    <p className="text-[12px] font-semibold text-[color:var(--primary)]">Summary</p>
+                  </div>
+                  {summarising ? (
+                    <div className="flex items-center gap-2 py-2">
+                      <Loader2 size={14} className="animate-spin text-muted-foreground" />
+                      <span className="text-[12px] text-muted-foreground">Summarising…</span>
+                    </div>
+                  ) : (
+                    <p className="text-[13px] leading-relaxed text-muted-foreground">{result.summary}</p>
+                  )}
+                </GlassCard>
+              )}
+
+              {/* Action buttons */}
               <div className="grid grid-cols-2 gap-2">
-                <button className="tap glass-strong rounded-[14px] py-3 text-[12.5px] font-medium flex items-center justify-center gap-1.5">
-                  <Sparkles size={13} /> Flashcards
+                <button
+                  onClick={handleSummarise}
+                  disabled={showSummary}
+                  className="tap glass-strong rounded-[14px] py-3 text-[12.5px] font-medium flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <Sparkles size={13} /> Summarise
                 </button>
                 <button className="tap glass-strong rounded-[14px] py-3 text-[12.5px] font-medium flex items-center justify-center gap-1.5">
-                  <Sparkles size={13} /> Quiz
+                  <Sparkles size={13} /> Quiz me
                 </button>
               </div>
 
-              <PrimaryButton className="w-full">Save to Notes</PrimaryButton>
+              <button
+                onClick={handleSave}
+                disabled={saved}
+                className={`w-full tap rounded-[16px] py-3.5 text-[14px] font-semibold flex items-center justify-center gap-2 transition-all ${
+                  saved
+                    ? "bg-green-500 text-white"
+                    : "gradient-primary text-white shadow-[0_8px_24px_-10px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
+                }`}
+              >
+                <BookmarkCheck size={16} />
+                {saved ? "Saved to Notes!" : "Save to Notes"}
+              </button>
+
+              <button
+                onClick={() => { setImage(null); setStatus("idle"); setSaved(false); setShowSummary(false); }}
+                className="w-full tap glass rounded-[14px] py-3 text-[13px] font-medium text-center"
+              >
+                Scan another
+              </button>
             </>
           )}
         </div>

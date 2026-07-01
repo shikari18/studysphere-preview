@@ -26,6 +26,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SavedNotesRouteImport } from './routes/saved-notes'
 
 const TutorRoute = TutorRouteImport.update({
   id: '/tutor',
@@ -112,6 +113,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SavedNotesRoute = SavedNotesRouteImport.update({
+  id: '/saved-notes',
+  path: '/saved-notes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/scan': typeof ScanRoute
   '/subjects': typeof SubjectsRoute
   '/tutor': typeof TutorRoute
+  '/saved-notes': typeof SavedNotesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/scan': typeof ScanRoute
   '/subjects': typeof SubjectsRoute
   '/tutor': typeof TutorRoute
+  '/saved-notes': typeof SavedNotesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/scan': typeof ScanRoute
   '/subjects': typeof SubjectsRoute
   '/tutor': typeof TutorRoute
+  '/saved-notes': typeof SavedNotesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/subjects'
     | '/tutor'
+    | '/saved-notes'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/subjects'
     | '/tutor'
+    | '/saved-notes'
   id:
     | '__root__'
     | '/'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/subjects'
     | '/tutor'
+    | '/saved-notes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -249,6 +261,7 @@ export interface RootRouteChildren {
   ScanRoute: typeof ScanRoute
   SubjectsRoute: typeof SubjectsRoute
   TutorRoute: typeof TutorRoute
+  SavedNotesRoute: typeof SavedNotesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/saved-notes': {
+      id: '/saved-notes'
+      path: '/saved-notes'
+      fullPath: '/saved-notes'
+      preLoaderRoute: typeof SavedNotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -393,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   ScanRoute: ScanRoute,
   SubjectsRoute: SubjectsRoute,
   TutorRoute: TutorRoute,
+  SavedNotesRoute: SavedNotesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
