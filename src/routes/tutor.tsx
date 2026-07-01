@@ -379,10 +379,21 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
         ctx = audioCtx;
         audioCtxRef.current = ctx;
 
-        // 3. Open WebSocket via local proxy endpoint
-        const isSecure = window.location.protocol === "https:";
-        const wsProtocol = isSecure ? "wss:" : "ws:";
-        const wsUrl = `${wsProtocol}//${window.location.host}/api/ws-gemini`;
+        // 3. Open WebSocket — direct to Google in production (server fetch() cannot proxy WS),
+        //    via Vite proxy /api/ws-gemini in local dev (proxy strips Origin header).
+        const geminiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+        let wsUrl: string;
+        if (geminiKey) {
+          // Production: connect directly — the AQ. key is accepted server-to-server
+          // and also from non-browser origins. Since we bake the key into the build,
+          // we skip the proxy and connect straight to Google.
+          wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${geminiKey}`;
+        } else {
+          // Local dev: use Vite proxy which strips the Origin header
+          const isSecure = window.location.protocol === "https:";
+          const wsProtocol = isSecure ? "wss:" : "ws:";
+          wsUrl = `${wsProtocol}//${window.location.host}/api/ws-gemini`;
+        }
         const socket = new WebSocket(wsUrl);
         if (isCancelled) {
           audioStream.getTracks().forEach((t) => t.stop());
