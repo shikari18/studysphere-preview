@@ -215,20 +215,33 @@ function SubjectDetail({
 
     const currentOpt = syllabusOptions.find(o => o.code === code) || subject;
     const subjectName = SYLLABUS_SUBJECT_NAMES[code] ?? currentOpt.name;
-    const urls = buildSyllabusUrls(code, subjectName);
+    const folder = `${subjectName} (${code})`;
 
-    let loaded = false;
-    for (const url of urls) {
+    // Try years newest→oldest until one loads
+    const years = ["26", "25", "24", "23", "22"];
+    let found: string | null = null;
+    for (const yy of years) {
+      const url = `https://www.gceguide.xyz/Cambridge%20IGCSE/${encodeURIComponent(folder)}/${code}_y${yy}_sy.pdf`;
       try {
-        const blob = await fetchPdfAsBlob(url);
-        setSyllabusBlobUrl(blob);
-        setSyllabusDirectUrl(url);
-        loaded = true;
-        break;
+        const res = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(6000) });
+        if (res.ok) { found = url; break; }
       } catch { /* try next */ }
     }
-    if (!loaded) setSyllabusError(true);
-    setSyllabusLoading(false);
+
+    if (found) {
+      // Use PDF.js viewer hosted on Mozilla CDN — works cross-origin without CORS issues
+      const viewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(found)}`;
+      setSyllabusBlobUrl(viewerUrl);
+      setSyllabusDirectUrl(found);
+      setSyllabusLoading(false);
+    } else {
+      // Fallback: try direct iframe with the y25 URL (some browsers can render it)
+      const fallbackUrl = `https://www.gceguide.xyz/Cambridge%20IGCSE/${encodeURIComponent(folder)}/${code}_y25_sy.pdf`;
+      setSyllabusDirectUrl(fallbackUrl);
+      setSyllabusBlobUrl(null);
+      setSyllabusLoading(false);
+      setSyllabusError(true);
+    }
   };
 
   const openPaper = async (year: string, session: string, paperNum: string, paperLabel: string, variant: string) => {
@@ -244,36 +257,40 @@ function SubjectDetail({
       variant 
     });
     setPaperLoading(true);
-    setPdfLoaded(null);
     setPaperTab("qp");
+    setPdfLoaded(null);
 
     const qpUrl = buildXtremeUrl(activeSyllabusCode, currentOpt.folder, year, session, paperNum, variant, "qp");
     const msUrl = buildXtremeUrl(activeSyllabusCode, currentOpt.folder, year, session, paperNum, variant, "ms");
 
+    // Probe QP availability
+    let qpOk = false;
     try {
-      const [qpResult, msResult] = await Promise.allSettled([
-        fetchPdfAsBlob(qpUrl),
-        fetchPdfAsBlob(msUrl),
-      ]);
-      setPdfLoaded({
-        qpBlob: qpResult.status === "fulfilled" ? qpResult.value : null,
-        msBlob: msResult.status === "fulfilled" ? msResult.value : null,
-        qpUrl,
-        msUrl,
-        error: qpResult.status === "rejected" && msResult.status === "rejected"
-          ? "Paper not found in archive." : null,
-      });
-      setPaperTab(qpResult.status === "fulfilled" ? "qp" : "ms");
-    } catch {
-      setPdfLoaded({ qpBlob: null, msBlob: null, qpUrl, msUrl, error: "Failed to load paper." });
-    } finally {
+      const r = await fetch(qpUrl, { method: "HEAD", signal: AbortSignal.timeout(8000) });
+      qpOk = r.ok;
+    } catch { qpOk = false; }
+
+    if (!qpOk) {
+      setPdfLoaded({ qpBlob: null, msBlob: null, qpUrl, msUrl, error: "Paper not found in archive. Try a different year, session, or variant." });
       setPaperLoading(false);
+      return;
     }
+
+    // Use PDF.js viewer — works for direct public PDFs
+    const qpViewer = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(qpUrl)}`;
+    const msViewer = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(msUrl)}`;
+
+    setPdfLoaded({
+      qpBlob: qpViewer,
+      msBlob: msViewer,
+      qpUrl,
+      msUrl,
+      error: null,
+    });
+    setPaperLoading(false);
   };
 
   const closePaperViewer = () => {
-    if (pdfLoaded?.qpBlob) URL.revokeObjectURL(pdfLoaded.qpBlob);
-    if (pdfLoaded?.msBlob) URL.revokeObjectURL(pdfLoaded.msBlob);
     setViewingPaper(null);
     setPdfLoaded(null);
   };
@@ -560,7 +577,14 @@ function SubjectDetail({
             </div>
           )}
           {!syllabusLoading && !syllabusError && syllabusBlobUrl && (
-            <iframe src={syllabusBlobUrl} className="flex-1 w-full border-0 bg-white" title="Syllabus PDF" />
+            <iframe
+              key={syllabusBlobUrl}
+              src={syllabusBlobUrl}
+              className="flex-1 w-full border-0"
+              style={{ background: "#525659" }}
+              title="Syllabus PDF"
+              allow="fullscreen"
+            />
           )}
         </div>
       )}
@@ -619,7 +643,16 @@ function SubjectDetail({
           )}
           {!paperLoading && (() => {
             const src = paperTab === "qp" ? pdfLoaded?.qpBlob : pdfLoaded?.msBlob;
-            return src ? <iframe key={src} src={src} className="flex-1 w-full border-0 bg-white" title={paperTab === "qp" ? "Question Paper" : "Mark Scheme"} /> : null;
+            return src ? (
+              <iframe
+                key={src}
+                src={src}
+                className="flex-1 w-full border-0"
+                style={{ background: "#525659" }}
+                title={paperTab === "qp" ? "Question Paper" : "Mark Scheme"}
+                allow="fullscreen"
+              />
+            ) : null;
           })()}
         </div>
       )}

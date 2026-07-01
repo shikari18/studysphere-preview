@@ -2,23 +2,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   Search, Mic, Upload, Sparkles as SparkIcon,
-  BookOpen, FileText, Scan, GraduationCap, BarChart2,
-  Calendar, Brain, Target, Layers, Play, Clock,
+  BookOpen, FileText, Scan,
+  Calendar, Brain, Play,
 } from "lucide-react";
 import { BotMark } from "@/components/BotMark";
 import { MobileShell, Section } from "@/components/mobile/Shell";
 import { GlassCard, Pill } from "@/components/mobile/ui";
-import { noteChapters } from "@/data/notes";
 import { IGCSE_SUBJECTS } from "@/data/past-papers/igcse-subjects";
-import logo from "@/assets/logo.png";
 
 export const Route = createFileRoute("/home")({
   head: () => ({ meta: [{ title: "Home — StudySphere AI" }] }),
   component: Home,
 });
-
-// Derive recent notes from real data (last 6 chapters)
-const recentNotes = noteChapters.slice(-6).reverse();
 
 // Popular subjects from real IGCSE list
 const popularSubjectCodes = ["0580", "0625", "0620", "0610", "0478", "0455"];
@@ -67,10 +62,7 @@ function Home() {
       <header className="px-5 pt-6 pb-2 flex items-center justify-between">
         <div>
           <p className="text-xs text-muted-foreground">{greeting}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <img src={logo} className="w-7 h-7 rounded-lg object-contain" alt="StudySphere Logo" />
-            <h1 className="text-[26px] font-semibold tracking-tight">StudySphere</h1>
-          </div>
+          <h1 className="text-[26px] font-semibold tracking-tight">Shi</h1>
           <p className="text-[13px] text-muted-foreground mt-1">What are we tackling today?</p>
         </div>
         <div className="w-11 h-11 rounded-full glass flex items-center justify-center font-semibold text-sm">S</div>
@@ -248,51 +240,56 @@ function Home() {
         </div>
       </Section>
 
-      {/* Recent notes from real data */}
-      <Section title="Study notes" action={<Link to="/notes" className="text-[12px] text-muted-foreground">See all</Link>}>
-        <div className="space-y-2">
-          {recentNotes.slice(0, 4).map((n, i) => (
-            <Link to="/notes" key={i}>
-              <GlassCard className="!p-4 flex items-center gap-3 tap">
-                <div className="w-10 h-10 rounded-[12px] gradient-primary flex items-center justify-center flex-shrink-0">
-                  <BookOpen size={14} color="white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium truncate">{n.title}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{n.subject} · {n.pages?.length ?? 0} sections</p>
-                </div>
-              </GlassCard>
-            </Link>
-          ))}
+      {/* ── Streak & Stats row ── */}
+      <Section>
+        <div className="grid grid-cols-2 gap-3">
+          <GlassCard className="!p-4 flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[16px]">🔥</span>
+              <span className="text-[11.5px] font-semibold text-muted-foreground">Study streak</span>
+            </div>
+            <p className="text-[28px] font-bold tracking-tight" style={{ color: "#f97316" }}>3</p>
+            <p className="text-[10.5px] text-muted-foreground font-medium">days in a row</p>
+          </GlassCard>
+          <GlassCard className="!p-4 flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[16px]">⚡</span>
+              <span className="text-[11.5px] font-semibold text-muted-foreground">This week</span>
+            </div>
+            <p className="text-[28px] font-bold tracking-tight" style={{ color: "#6d4cff" }}>5h 24m</p>
+            <p className="text-[10.5px] text-emerald-500 font-medium">↑ 18% vs last week</p>
+          </GlassCard>
         </div>
       </Section>
 
-      {/* Today Stats */}
-      <Section title="Today">
-        <div className="grid grid-cols-2 gap-3">
-          <GlassCard className="!p-4">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Clock size={14} className="text-[#a78bfa]" />
-              <span className="text-[11.5px] font-medium">Focus time</span>
+      {/* ── Exam countdown ── */}
+      <Section title="Upcoming exams">
+        <GlassCard className="!p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[13px] font-bold">IGCSE May/June 2025</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Cambridge International</p>
             </div>
-            <p className="text-[24px] font-bold mt-2 text-foreground">
-              32<span className="text-xs font-semibold ml-0.5">m</span>
-            </p>
-            <p className="text-[10px] text-emerald-500 font-medium mt-1">+12m vs avg</p>
-          </GlassCard>
-          
-          <GlassCard className="!p-4">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Target size={14} className="text-[#a78bfa]" />
-              <span className="text-[11.5px] font-medium">Accuracy</span>
+            <div className="text-center">
+              <p className="text-[24px] font-bold" style={{ color: "#6d4cff" }}>42</p>
+              <p className="text-[10px] text-muted-foreground font-medium">days left</p>
             </div>
-            <p className="text-[24px] font-bold mt-2 text-foreground">
-              78<span className="text-xs font-semibold ml-0.5">%</span>
-            </p>
-            <p className="text-[10px] text-emerald-500 font-medium mt-1">▲ 4%</p>
-          </GlassCard>
+          </div>
+          <div className="mt-3 h-1.5 rounded-full bg-hairline overflow-hidden">
+            <div className="h-full rounded-full gradient-primary" style={{ width: "68%" }} />
+          </div>
+          <p className="text-[10.5px] text-muted-foreground mt-1.5">68% of prep time used</p>
+        </GlassCard>
+      </Section>
+
+      {/* ── Motivational footer ── */}
+      <Section>
+        <div className="text-center py-4">
+          <p className="text-[12px] text-muted-foreground">Powered by</p>
+          <p className="text-[13px] font-semibold mt-0.5" style={{ color: "#6d4cff" }}>Cambridge IGCSE · {IGCSE_SUBJECTS.length} subjects</p>
         </div>
       </Section>
     </MobileShell>
   );
 }
+
