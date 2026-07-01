@@ -105,7 +105,10 @@ export default defineConfig({
           target: "wss://generativelanguage.googleapis.com",
           changeOrigin: true,
           ws: true,
-          rewrite: () => "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=AQ.Ab8RN6Lq-UQys-_ZeYVAcF6GkJAUKLaEPpjjZON73xBeQFhXdQ",
+          rewrite: () => {
+            const key = process.env.VITE_GEMINI_API_KEY || "AQ.Ab8RN6Lq-UQys-_ZeYVAcF6GkJAUKLaEPpjjZON73xBeQFhXdQ";
+            return `/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${key}`;
+          },
           headers: {
             "Origin": "https://generativelanguage.googleapis.com",
           },
