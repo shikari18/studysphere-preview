@@ -52,23 +52,29 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-// ─── Image generation via Gemini Imagen ───────────────────────────────────────
+// ─── Image generation via Gemini 2.0 Flash (native image output) ─────────────
 async function generateImageGemini(prompt: string): Promise<string> {
   const key = import.meta.env.VITE_GEMINI_API_KEY as string;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`;
+  // Gemini 2.0 Flash with image generation capability
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      instances: [{ prompt }],
-      parameters: { sampleCount: 1 },
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
     }),
   });
-  if (!res.ok) throw new Error(`Imagen error ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Image generation error ${res.status}: ${errText}`);
+  }
   const data = await res.json();
-  const b64 = data.predictions?.[0]?.bytesBase64Encoded;
-  if (!b64) throw new Error("No image returned");
-  return `data:image/png;base64,${b64}`;
+  // Find the inline image part
+  const parts: any[] = data.candidates?.[0]?.content?.parts ?? [];
+  const imgPart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
+  if (!imgPart) throw new Error("No image was returned. The model may not support image generation for this prompt.");
+  return `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
 }
 
 // ─── PDF text extractor (simple — reads embedded text via FileReader) ─────────
@@ -270,9 +276,9 @@ Your single goal: by the end of every session, the student should feel slightly 
 
   return (
     <MobileShell hideNav>
-      <div className="flex flex-col" style={{ minHeight: "100dvh" }}>
+      <div className="flex flex-col h-[100dvh] overflow-hidden relative">
         {/* Header */}
-        <header className="px-4 pt-5 pb-3 flex items-center justify-between gap-3 sticky top-0 z-30 backdrop-blur-md bg-[color-mix(in_oklab,var(--background)_82%,transparent)] border-b border-hairline">
+        <header className="px-4 pt-5 pb-3 flex items-center justify-between gap-3 flex-shrink-0 z-30 backdrop-blur-md bg-[color-mix(in_oklab,var(--background)_82%,transparent)] border-b border-hairline">
           <Link to="/home" className="w-10 h-10 rounded-full glass tap flex items-center justify-center" aria-label="Back">
             <ArrowLeft size={17} />
           </Link>
@@ -291,7 +297,7 @@ Your single goal: by the end of every session, the student should feel slightly 
         </header>
 
         {/* Chat scroll area */}
-        <div ref={scrollRef} className="flex-1 px-4 pt-4 pb-[140px] space-y-4 overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 px-4 pt-4 pb-4 space-y-4 overflow-y-auto min-h-0">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} anim-in`}>
               {m.role === "user" ? (
@@ -367,7 +373,7 @@ Your single goal: by the end of every session, the student should feel slightly 
         </div>
 
         {/* ── Composer ──────────────────────────────────────────────────────── */}
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-40 px-4 pb-6 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
+        <div className="flex-shrink-0 px-4 pb-5 pt-2 bg-background border-t border-hairline">
 
           {/* Pending attachment preview */}
           {pendingAttachment && (
@@ -431,14 +437,14 @@ Your single goal: by the end of every session, the student should feel slightly 
         {showAttachMenu && (
           <>
             <div className="fixed inset-0 z-[45]" onClick={() => setShowAttachMenu(false)} />
-            <div className="fixed bottom-[100px] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[388px] z-50 glass-strong rounded-[22px] p-4 border border-hairline shadow-lg anim-in">
+            <div className="absolute bottom-[90px] left-4 right-4 z-50 glass-strong rounded-[22px] p-4 border border-hairline shadow-lg anim-in">
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3 px-1">Attach</p>
               <div className="grid grid-cols-4 gap-3">
                 {[
                   { icon: ImageLucide, label: "Photos", action: () => { fileRef.current!.accept = "image/*"; fileRef.current!.capture = ""; fileRef.current?.click(); } },
                   { icon: Camera, label: "Camera", action: () => { camRef.current?.click(); } },
                   { icon: FileText, label: "PDF", action: () => { fileRef.current!.accept = "application/pdf"; fileRef.current!.capture = ""; fileRef.current?.click(); } },
-                  { icon: File, label: "File", action: () => { fileRef.current!.accept = "*/*"; fileRef.current!.capture = ""; fileRef.current?.click(); } },
+                  { icon: File, label: "File", action: () => { fileRef.current!.accept = "image/*,application/pdf,text/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx"; fileRef.current!.capture = ""; fileRef.current?.click(); } },
                 ].map(({ icon: Icon, label, action }) => (
                   <button key={label} onClick={action} className="flex flex-col items-center gap-2 tap">
                     <div className="w-14 h-14 rounded-[18px] glass flex items-center justify-center">

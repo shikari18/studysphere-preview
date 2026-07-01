@@ -50,12 +50,12 @@ function Scan() {
                 type: "text",
                 text: `You are an expert note-taking and study assistant. Read this image of handwritten or printed study notes carefully.
 
-Return a JSON object with exactly three fields:
-1. "title" — a short descriptive heading (e.g. "Photosynthesis — IGCSE Biology")
-2. "fullNote" — a comprehensive, well-structured, long-form note expanding everything in the image into detailed paragraphs, headings, subheadings, bullet points, examples, definitions, and explanations. Make it thorough and educational. Use plain text only (no markdown symbols).
-3. "summary" — a concise 3–5 sentence summary of the key points.
+Return ONLY a valid JSON object with exactly three fields:
+- "title": a short descriptive heading (e.g. "Photosynthesis — IGCSE Biology")
+- "fullNote": a comprehensive, well-structured, long-form note expanding everything in the image. Use plain text with newlines for structure. Make it thorough and educational.
+- "summary": a concise 3-5 sentence summary of the key points.
 
-Respond with raw JSON only — no markdown, no explanation.`,
+IMPORTANT: Return raw JSON only. No markdown code blocks, no backticks, no explanation. Start your response with { and end with }.`,
               },
               { type: "image_url", image_url: { url: dataUrl } },
             ],
@@ -64,7 +64,18 @@ Respond with raw JSON only — no markdown, no explanation.`,
         GROQ_VISION_MODEL
       );
 
-      const parsed: ScanResult = JSON.parse(text.replace(/```json|```/g, "").trim());
+      // Robust JSON extraction — strip any markdown/extra text
+      let jsonStr = text.trim();
+      // Remove markdown code fences if present
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+      // Extract first {...} block
+      const firstBrace = jsonStr.indexOf("{");
+      const lastBrace = jsonStr.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        jsonStr = jsonStr.slice(firstBrace, lastBrace + 1);
+      }
+      const parsed: ScanResult = JSON.parse(jsonStr);
+      if (!parsed.title || !parsed.fullNote) throw new Error("Incomplete response from AI");
       setResult(parsed);
       setStatus("done");
     } catch (err) {
