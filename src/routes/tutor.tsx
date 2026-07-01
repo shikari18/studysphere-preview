@@ -18,8 +18,8 @@ type Msg =
 
 // ─── Gemini Live API constants ────────────────────────────────────────────────
 const GEMINI_API_KEY = "AQ.Ab8RN6Lq-UQys-_ZeYVAcF6GkJAUKLaEPpjjZON73xBeQFhXdQ";
-const GEMINI_WS_URL = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${GEMINI_API_KEY}`;
-const GEMINI_MODEL = "models/gemini-2.0-flash-live-001";
+const GEMINI_WS_URL = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_MODEL = "models/gemini-3.1-flash-live-preview";
 // Output sample rate for Gemini Live
 const OUTPUT_SAMPLE_RATE = 24000;
 // Input sample rate (we'll downsample from mic)
@@ -424,13 +424,16 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
           }
         };
 
-        ws.onerror = () => {
+        ws.onerror = (e: any) => {
+          console.error("Gemini Live WebSocket error:", e);
           setStatus("error");
-          setErrorMsg("Could not connect to Gemini Live. Check your network.");
+          setErrorMsg("Could not connect to Gemini Live. Please check your API key, network, or try again.");
         };
 
-        ws.onclose = () => {
-          // cleanup handled by effect return
+        ws.onclose = (e) => {
+          console.warn("Gemini Live WebSocket closed:", e);
+          setStatus("error");
+          setErrorMsg(e.reason || "Connection closed by Gemini server. Please check your API key or model availability.");
         };
 
       } catch (err: any) {
