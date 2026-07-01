@@ -40,6 +40,14 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     const urlObj = new URL(request.url);
+    if (urlObj.pathname === "/api/get-gemini-key") {
+      const key = (env as any)?.GEMINI_API_KEY || (env as any)?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+      return new Response(JSON.stringify({ key: key || null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     if (urlObj.pathname === "/api/ws-gemini") {
       const key = (env as any)?.GEMINI_API_KEY || (env as any)?.VITE_GEMINI_API_KEY;
       if (!key) {

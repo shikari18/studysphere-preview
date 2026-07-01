@@ -381,11 +381,25 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
 
         // 3. Open WebSocket — direct to Google in production (server fetch() cannot proxy WS),
         //    via Vite proxy /api/ws-gemini in local dev (proxy strips Origin header).
-        const geminiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+        let geminiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+        if (!geminiKey) {
+          try {
+            const keyResponse = await fetch("/api/get-gemini-key");
+            if (keyResponse.ok) {
+              const keyData = await keyResponse.json();
+              if (keyData.key) {
+                geminiKey = keyData.key;
+              }
+            }
+          } catch (keyErr) {
+            console.error("Failed to dynamically fetch Gemini key from server:", keyErr);
+          }
+        }
+
         let wsUrl: string;
         if (geminiKey) {
           // Production: connect directly — the AQ. key is accepted server-to-server
-          // and also from non-browser origins. Since we bake the key into the build,
+          // and also from non-browser origins. Since we obtain the key from the environment,
           // we skip the proxy and connect straight to Google.
           wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${geminiKey}`;
         } else {
