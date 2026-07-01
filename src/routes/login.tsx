@@ -14,7 +14,7 @@ function Login() {
 
   return (
     <div
-      className="fixed inset-0 overflow-hidden flex flex-col"
+      className="h-[100dvh] overflow-hidden flex flex-col"
       style={{ background: "#ffffff", color: "#0b0b14" }}
     >
       <header className="px-6 pt-8 flex items-center justify-between">
