@@ -346,14 +346,15 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
 
   // ── Main connect effect ─────────────────────────────────────────────────────
   useEffect(() => {
-    let ws: WebSocket;
-    let stream: MediaStream;
-    let ctx: AudioContext;
+    let isCancelled = false;
+    let ws: WebSocket | null = null;
+    let stream: MediaStream | null = null;
+    let ctx: AudioContext | null = null;
 
     const connect = async () => {
       try {
         // 1. Get mic with echo cancellation, noise suppression and auto gain control
-        stream = await navigator.mediaDevices.getUserMedia({
+        const audioStream = await navigator.mediaDevices.getUserMedia({
           audio: {
             sampleRate: INPUT_SAMPLE_RATE,
             channelCount: 1,
@@ -362,19 +363,42 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
             autoGainControl: true,
           },
         });
+        
+        if (isCancelled) {
+          audioStream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        stream = audioStream;
         micStreamRef.current = stream;
 
         // 2. AudioContext for mic processing + playback
-        ctx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
+        const audioCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
+        if (isCancelled) {
+          audioStream.getTracks().forEach((t) => t.stop());
+          audioCtx.close().catch(() => {});
+          return;
+        }
+        ctx = audioCtx;
         audioCtxRef.current = ctx;
 
         // 3. Open WebSocket
-        ws = new WebSocket(GEMINI_WS_URL);
+        const socket = new WebSocket(GEMINI_WS_URL);
+        if (isCancelled) {
+          audioStream.getTracks().forEach((t) => t.stop());
+          audioCtx.close().catch(() => {});
+          socket.close();
+          return;
+        }
+        ws = socket;
         wsRef.current = ws;
 
         ws.binaryType = "arraybuffer";
 
         ws.onopen = () => {
+          if (isCancelled) {
+            socket.close();
+            return;
+          }
           // Send setup message
           const setup = {
             setup: {
@@ -394,19 +418,20 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
               },
             },
           };
-          ws.send(JSON.stringify(setup));
+          socket.send(JSON.stringify(setup));
         };
 
         ws.onmessage = (event) => {
+          if (isCancelled) return;
           try {
             const data = JSON.parse(typeof event.data === "string" ? event.data : new TextDecoder().decode(event.data));
 
             // Setup complete
             if (data.setupComplete !== undefined) {
               setStatus("listening");
-              startMicCapture(stream, ctx, ws);
+              startMicCapture(audioStream, audioCtx, socket);
               // Send an initial greeting trigger
-              ws.send(JSON.stringify({
+              socket.send(JSON.stringify({
                 client_content: {
                   turns: [{ role: "user", parts: [{ text: "Hello!" }] }],
                   turn_complete: true,
@@ -433,18 +458,21 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
         };
 
         ws.onerror = (e: any) => {
+          if (isCancelled) return;
           console.error("Gemini Live WebSocket error:", e);
           setStatus("error");
           setErrorMsg("Could not connect to Gemini Live. Please check your API key, network, or try again.");
         };
 
         ws.onclose = (e) => {
+          if (isCancelled) return;
           console.warn("Gemini Live WebSocket closed:", e);
           setStatus("error");
           setErrorMsg(e.reason || "Connection closed by Gemini server. Please check your API key or model availability.");
         };
 
       } catch (err: any) {
+        if (isCancelled) return;
         setStatus("error");
         setErrorMsg(err?.message ?? "Microphone access denied or connection failed.");
       }
@@ -453,9 +481,16 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
     connect();
 
     return () => {
+      isCancelled = true;
       try { if (ws && ws.readyState < 2) ws.close(); } catch (_) {}
+      try { if (wsRef.current && wsRef.current.readyState < 2) wsRef.current.close(); } catch (_) {}
+      
       stream?.getTracks().forEach((t) => t.stop());
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
+      
       if (ctx && ctx.state !== "closed") { ctx.close().catch(() => {}); }
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") { audioCtxRef.current.close().catch(() => {}); }
+
       wsRef.current = null;
       micStreamRef.current = null;
       audioCtxRef.current = null;
