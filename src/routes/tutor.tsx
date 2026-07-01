@@ -442,9 +442,9 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
     connect();
 
     return () => {
-      ws?.close();
+      try { if (ws && ws.readyState < 2) ws.close(); } catch (_) {}
       stream?.getTracks().forEach((t) => t.stop());
-      ctx?.close();
+      if (ctx && ctx.state !== "closed") { ctx.close().catch(() => {}); }
       wsRef.current = null;
       micStreamRef.current = null;
       audioCtxRef.current = null;
@@ -507,9 +507,11 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
   };
 
   const handleEnd = () => {
-    wsRef.current?.close();
+    try { if (wsRef.current && wsRef.current.readyState < 2) wsRef.current.close(); } catch (_) {}
     micStreamRef.current?.getTracks().forEach((t) => t.stop());
-    audioCtxRef.current?.close();
+    const ctx = audioCtxRef.current;
+    if (ctx && ctx.state !== "closed") { ctx.close().catch(() => {}); }
+    audioCtxRef.current = null;
     onEnd();
   };
 

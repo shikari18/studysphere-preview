@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import {
-  Search, ChevronRight, X, FileText, ExternalLink, Loader2,
+  Search, ChevronRight, ChevronLeft, X, FileText, ExternalLink, Loader2,
   BookOpen, Beaker, Calculator, Globe, Laptop, Palette, Briefcase, Languages, GraduationCap,
   Eye, CheckCircle2, Layers,
 } from "lucide-react";
