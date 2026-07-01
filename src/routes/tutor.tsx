@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Mic, ArrowLeft, Phone, PhoneOff, MicOff, Volume2, Loader2,
   Plus, Send, ThumbsUp, ThumbsDown, ImageIcon, FileText,
-  Camera, Image as ImageLucide, File, X,
+  Camera, Image as ImageLucide, File, X, Square,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile/Shell";
 import { GlassCard } from "@/components/mobile/ui";
@@ -107,6 +107,62 @@ function isImageGenRequest(text: string) {
   return IMAGE_GEN_TRIGGERS.some((t) => lower.includes(t));
 }
 
+// ─── Text-to-speech via Gemini TTS ───────────────────────────────────────────
+async function speakWithGemini(text: string): Promise<AudioBuffer> {
+  const key = import.meta.env.VITE_GEMINI_API_KEY as string;
+  // Strip markdown symbols so TTS sounds natural
+  const clean = text
+    .replace(/#{1,6}\s/g, "")
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/`{1,3}[^`]*`{1,3}/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^\s*[-•]\s/gm, "")
+    .replace(/^\s*\d+\.\s/gm, "")
+    .trim();
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: clean }] }],
+      generationConfig: {
+        responseModalities: ["AUDIO"],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: "Aoede" },
+          },
+        },
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`TTS error ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const parts: any[] = data.candidates?.[0]?.content?.parts ?? [];
+  const audioPart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("audio/"));
+  if (!audioPart) throw new Error("No audio returned");
+
+  // Decode base64 PCM → AudioBuffer
+  const raw = atob(audioPart.inlineData.data);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+
+  const mimeType: string = audioPart.inlineData.mimeType; // e.g. "audio/pcm;rate=24000"
+  const rateMatch = mimeType.match(/rate=(\d+)/);
+  const sampleRate = rateMatch ? parseInt(rateMatch[1]) : 24000;
+
+  // PCM 16-bit little-endian → float32
+  const int16 = new Int16Array(bytes.buffer);
+  const float32 = new Float32Array(int16.length);
+  for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+
+  const audioCtx = new AudioContext({ sampleRate });
+  const buf = audioCtx.createBuffer(1, float32.length, sampleRate);
+  buf.copyToChannel(float32, 0);
+  return buf;
+}
+
 // ─── Tutor component ──────────────────────────────────────────────────────────
 function Tutor() {
   const [messages, setMessages] = useState<Msg[]>([
@@ -118,12 +174,15 @@ function Tutor() {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState<AttachmentType | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
   const mediaRecRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const ttsCtxRef = useRef<AudioContext | null>(null);
+  const ttsSrcRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -277,6 +336,33 @@ Your single goal: by the end of every session, the student should feel slightly 
     }
   };
 
+  // ── TTS speak / stop ─────────────────────────────────────────────────────────
+  const stopSpeaking = () => {
+    try { ttsSrcRef.current?.stop(); } catch (_) {}
+    try { ttsCtxRef.current?.close(); } catch (_) {}
+    ttsSrcRef.current = null;
+    ttsCtxRef.current = null;
+    setSpeakingIdx(null);
+  };
+
+  const speak = async (text: string, idx: number) => {
+    stopSpeaking();
+    setSpeakingIdx(idx);
+    try {
+      const buf = await speakWithGemini(text);
+      const ctx = new AudioContext({ sampleRate: buf.sampleRate });
+      ttsCtxRef.current = ctx;
+      const src = ctx.createBufferSource();
+      ttsSrcRef.current = src;
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.onended = () => { setSpeakingIdx(null); ttsCtxRef.current = null; ttsSrcRef.current = null; };
+      src.start(0);
+    } catch {
+      setSpeakingIdx(null);
+    }
+  };
+
   return (
     <MobileShell hideNav>
       <div className="flex flex-col h-[100dvh] overflow-hidden relative">
@@ -353,8 +439,30 @@ Your single goal: by the end of every session, the student should feel slightly 
                       <img src={m.generatedImage} alt="Generated" className="w-full max-w-[260px] rounded-[20px] border border-hairline shadow-md" />
                     </div>
                   ) : (
-                    <div className="text-[14px] leading-relaxed text-foreground prose-sm">
-                      {renderMarkdown(m.text)}
+                    <div className="space-y-1.5">
+                      <div className="text-[14px] leading-relaxed text-foreground prose-sm">
+                        {renderMarkdown(m.text)}
+                      </div>
+                      {/* Speaker / Stop button */}
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        {speakingIdx === i ? (
+                          <button
+                            onClick={stopSpeaking}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-500 text-[11px] font-medium tap"
+                            aria-label="Stop reading"
+                          >
+                            <Square size={10} fill="currentColor" /> Stop
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => speak(m.text, i)}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full glass border border-hairline text-muted-foreground text-[11px] font-medium tap hover:text-[color:var(--primary)]"
+                            aria-label="Read aloud"
+                          >
+                            <Volume2 size={11} /> Listen
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
