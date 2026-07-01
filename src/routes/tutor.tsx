@@ -492,7 +492,10 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           realtime_input: {
-            media_chunks: [{ mime_type: "audio/pcm;rate=16000", data: b64 }],
+            audio: {
+              mime_type: "audio/pcm;rate=16000",
+              data: b64,
+            },
           },
         }));
       }
