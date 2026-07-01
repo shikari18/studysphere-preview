@@ -352,8 +352,16 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
 
     const connect = async () => {
       try {
-        // 1. Get mic
-        stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: INPUT_SAMPLE_RATE, channelCount: 1 } });
+        // 1. Get mic with echo cancellation, noise suppression and auto gain control
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            sampleRate: INPUT_SAMPLE_RATE,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
         micStreamRef.current = stream;
 
         // 2. AudioContext for mic processing + playback
@@ -473,7 +481,9 @@ function GeminiCallSession({ onEnd }: { onEnd: () => void }) {
     const ratio = srcRate / targetRate;
 
     processor.onaudioprocess = (e) => {
-      if (mutableMuted.current) return;
+      // If user manually muted or if AI is currently speaking, do not send mic audio.
+      // This completely prevents the AI from hearing itself and triggering feedback loops.
+      if (mutableMuted.current || isPlayingRef.current) return;
       const input = e.inputBuffer.getChannelData(0);
       const combined = new Float32Array(residual.length + input.length);
       combined.set(residual);
