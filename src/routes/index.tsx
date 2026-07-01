@@ -44,7 +44,7 @@ function Onboarding() {
 
   return (
     <div
-      className="h-[100dvh] overflow-hidden flex flex-col"
+      className="fixed inset-0 overflow-hidden flex flex-col"
       style={{ background: "#ffffff", color: "#0b0b14" }}
     >
       <header className="px-6 pt-8 flex items-center gap-2.5">
@@ -55,7 +55,7 @@ function Onboarding() {
       </header>
 
       <div
-        className="relative mx-6 mt-6 aspect-[4/5] rounded-[28px] overflow-hidden"
+        className="relative flex-1 min-h-0 mx-6 mt-6 rounded-[28px] overflow-hidden"
         style={{ boxShadow: "0 20px 60px -30px rgba(80,60,200,0.35)" }}
       >
         <img src={hero} alt="Student" className="w-full h-full object-cover" width={1024} height={1280} />

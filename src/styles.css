@@ -54,6 +54,11 @@
   --shadow-lift: 0 1px 0 rgba(255,255,255,0.06) inset, 0 20px 50px -20px rgba(0,0,0,0.55);
 }
 
+/* ── Prevent overscroll bounce showing background colour on iOS/Android ── */
+html {
+  background-color: #ffffff;
+}
+
 /* Dark theme — default */
 :root, .dark {
   --background: oklch(0.13 0.025 265);
@@ -119,14 +124,22 @@
     text-rendering: optimizeLegibility;
     overscroll-behavior-y: none;
     overscroll-behavior-x: none;
+    overflow: hidden;
+    height: 100%;
   }
-  html, body { height: 100%; }
   body {
     background:
       radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 60%),
       radial-gradient(900px 500px at 110% 10%, color-mix(in oklab, var(--secondary) 8%, transparent), transparent 60%),
       var(--background);
-    min-height: 100vh;
+    height: 100%;
+    overflow: hidden;
+  }
+  /* App root fills viewport and is the only scroll container */
+  #root {
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: none;
   }
 }
 
@@ -171,6 +184,7 @@
   margin: 0 auto;
   position: relative;
   background-color: var(--background);
+  overscroll-behavior: none;
 }
 
 /* Scrollbar */
